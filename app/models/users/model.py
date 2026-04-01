@@ -264,5 +264,4 @@ from app.models.requests import TripRequest  # noqa: E402
 from app.models.chat import ConversationParticipant, Message  # noqa: E402
 from app.models.reviews import Review  # noqa: E402
 from app.models.notifications import Notification  # noqa: E402
-from app.models.admin import AuditLog  # noqa: E402
-from app.models.users import UserSettings  # noqa: E402
+from app.models.users.settings import UserSettings  # noqa: E402
