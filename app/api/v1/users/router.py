@@ -20,7 +20,9 @@ from app.services.users.service import UserService
 router = APIRouter()
 
 
-async def get_user_service(db: AsyncSession) -> UserService:
+async def get_user_service(
+    db: Annotated[AsyncSession, Depends(get_db)]
+) -> UserService:
     """
     Получение сервиса пользователей.
     
@@ -40,8 +42,8 @@ UserServiceDep = Annotated[UserService, Depends(get_user_service)]
 @router.get("/{user_id}", response_model=UserResponse)
 async def get_user_profile(
     user_id: str,
-    current_user: CurrentUser = Depends(get_current_user),
     user_service: UserServiceDep,
+    current_user: CurrentUser,
 ) -> UserResponse:
     """
     Просмотр профиля пользователя.
@@ -84,13 +86,13 @@ async def get_user_profile(
 @router.put("/{user_id}", response_model=UserResponse)
 async def update_user_profile(
     user_id: str,
+    user_service: UserServiceDep,
+    current_user: CurrentUser,
     name: str | None = Form(None, description="Имя пользователя"),
     phone: str | None = Form(None, description="Номер телефона"),
     bio: str | None = Form(None, description="Описание профиля"),
     language: str | None = Form(None, description="Язык интерфейса (ru, en)"),
     avatar: UploadFile | None = Form(None, description="Файл аватара"),
-    current_user: CurrentUser = Depends(get_current_user),
-    user_service: UserServiceDep,
 ) -> UserResponse:
     """
     Редактирование профиля пользователя.
@@ -149,8 +151,8 @@ async def update_user_profile(
 
 @router.get("/me", response_model=UserResponse)
 async def get_my_profile(
-    current_user: CurrentUser = Depends(get_current_user),
     user_service: UserServiceDep,
+    current_user: CurrentUser,
 ) -> UserResponse:
     """
     Просмотр своего профиля.
@@ -169,13 +171,13 @@ async def get_my_profile(
 
 @router.put("/me", response_model=UserResponse)
 async def update_my_profile(
+    user_service: UserServiceDep,
+    current_user: CurrentUser,
     name: str | None = Form(None, description="Имя пользователя"),
     phone: str | None = Form(None, description="Номер телефона"),
     bio: str | None = Form(None, description="Описание профиля"),
     language: str | None = Form(None, description="Язык интерфейса (ru, en)"),
     avatar: UploadFile | None = Form(None, description="Файл аватара"),
-    current_user: CurrentUser = Depends(get_current_user),
-    user_service: UserServiceDep,
 ) -> UserResponse:
     """
     Редактирование своего профиля.

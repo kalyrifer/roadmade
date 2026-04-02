@@ -2,7 +2,7 @@
 Тесты для базовой архитектуры.
 """
 import pytest
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
 
 from app.main import app
 
@@ -10,7 +10,8 @@ from app.main import app
 @pytest.fixture
 async def client() -> AsyncClient:
     """Фикстура для тестового клиента."""
-    async with AsyncClient(app=app, base_url="http://test") as ac:
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
 
 

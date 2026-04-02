@@ -294,9 +294,9 @@ async def confirm_request(
 async def reject_request(
     trip_id: UUID,
     request_id: UUID,
-    data: Optional[TripRequestRejectRequest] = None,
     db: DbSession,
     current_user_id: int,
+    data: Optional[TripRequestRejectRequest] = None,
 ):
     """
     Отклонение заявки на бронирование.

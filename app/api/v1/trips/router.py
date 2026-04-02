@@ -33,7 +33,9 @@ from app.services.trips.service import TripService
 router = APIRouter()
 
 
-async def get_trip_repository(db: AsyncSession) -> TripRepository:
+async def get_trip_repository(
+    db: Annotated[AsyncSession, Depends(get_db)]
+) -> TripRepository:
     """
     Получение repository для работы с поездками.
     

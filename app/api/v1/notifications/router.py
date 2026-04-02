@@ -6,6 +6,7 @@
 - PUT /{notification_id}/read — отметить прочитанным
 - PUT /read-all — массовая отметка прочитанными
 """
+from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status

@@ -9,9 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
-# revision identifiers, used by alembic.
 revision: str = '003_reviews'
 down_revision: Union[str, None] = '002_chat'
 branch_labels: Union[str, Sequence[str], None] = None
@@ -22,59 +20,37 @@ def upgrade() -> None:
     """Create reviews table."""
     # Create enum type for review status if not exists
     op.execute("""
-        CREATE TYPE review_status AS ENUM ('pending', 'published', 'rejected')
+        DO $$ BEGIN
+            CREATE TYPE review_status AS ENUM ('pending', 'published', 'rejected');
+        EXCEPTION
+            WHEN duplicate_object THEN null;
+        END $$;
     """)
     
     # === reviews ===
-    op.create_table(
-        'reviews',
-        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('trip_id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('author_id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('target_id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('rating', sa.SmallInteger(), nullable=False),
-        sa.Column('text', sa.Text(), nullable=True),
-        sa.Column('status', sa.Enum('pending', 'published', 'rejected', name='review_status'), nullable=False),
-        sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
-        sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(
-            ['trip_id'],
-            ['trips.id'],
-            ondelete='CASCADE',
-        ),
-        sa.ForeignKeyConstraint(
-            ['author_id'],
-            ['users.id'],
-            ondelete='CASCADE',
-        ),
-        sa.ForeignKeyConstraint(
-            ['target_id'],
-            ['users.id'],
-            ondelete='CASCADE',
-        ),
-        sa.UniqueConstraint('trip_id', 'author_id', name='uq_reviews_trip_author'),
-        comment='Отзывы участников поездки',
-    )
+    op.execute("""
+        CREATE TABLE IF NOT EXISTS reviews (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            trip_id UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+            author_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            target_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            rating SMALLINT NOT NULL,
+            text TEXT,
+            status review_status NOT NULL DEFAULT 'pending',
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            CONSTRAINT uq_reviews_trip_author UNIQUE (trip_id, author_id)
+        )
+    """)
     
     # Create indexes
-    op.create_index('ix_reviews_trip_id', 'reviews', ['trip_id'])
-    op.create_index('ix_reviews_author_id', 'reviews', ['author_id'])
-    op.create_index('ix_reviews_target_id', 'reviews', ['target_id'])
-    op.create_index('ix_reviews_status', 'reviews', ['status'])
-    op.create_index('ix_reviews_created_at', 'reviews', ['created_at'])
+    op.execute("CREATE INDEX IF NOT EXISTS ix_reviews_trip_id ON reviews (trip_id)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_reviews_author_id ON reviews (author_id)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_reviews_target_id ON reviews (target_id)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_reviews_status ON reviews (status)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_reviews_created_at ON reviews (created_at)")
 
 
 def downgrade() -> None:
     """Drop reviews table."""
-    # Drop indexes
-    op.drop_index('ix_reviews_created_at', table_name='reviews')
-    op.drop_index('ix_reviews_status', table_name='reviews')
-    op.drop_index('ix_reviews_target_id', table_name='reviews')
-    op.drop_index('ix_reviews_author_id', table_name='reviews')
-    op.drop_index('ix_reviews_trip_id', table_name='reviews')
-    
-    # Drop table
-    op.drop_table('reviews')
-    
-    # Drop enum type
-    op.execute('DROP TYPE IF EXISTS review_status')
+    op.execute("DROP TABLE IF EXISTS reviews CASCADE")

@@ -18,7 +18,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-from app.api.deps import get_db_session, get_current_user
+from app.api.deps import DbSession
+from app.core.dependencies import get_current_user
 from app.models.users.model import User
 from app.schemas.chat import (
     ConversationCreate,
@@ -38,7 +39,7 @@ from app.services.chat import (
     NotParticipantError,
     TripNotFoundError,
 )
-from app.db.session import AsyncSession
+from app.db.session import AsyncSession, get_db
 
 router = APIRouter()
 security = HTTPBearer()
@@ -52,7 +53,7 @@ async def get_current_user_dep(
 
 
 async def get_chat_service(
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = Depends(get_db),
 ) -> ChatService:
     """Получение сервиса чатов."""
     return ChatService(session)

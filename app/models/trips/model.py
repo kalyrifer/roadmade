@@ -5,7 +5,7 @@
 и может быть забронирована другими пользователями (пассажирами).
 """
 import uuid
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timezone
 from enum import Enum as PyEnum
 
 from sqlalchemy import (
@@ -21,6 +21,7 @@ from sqlalchemy import (
     Text,
     Time,
 )
+from sqlalchemy.sql.sqltypes import Enum as SqlEnum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -93,12 +94,12 @@ class Trip(Base):
         comment="Дата поездки",
     )
     departure_time_start: Mapped[time] = mapped_column(
-        Time(timezone=True),
+        Time(timezone=False),
         nullable=False,
         comment="Время отправления (начало)",
     )
     departure_time_end: Mapped[time | None] = mapped_column(
-        Time(timezone=True),
+        Time(timezone=False),
         nullable=True,
         comment="Время отправления (конец диапазона)",
     )
@@ -109,7 +110,7 @@ class Trip(Base):
         comment="Используется ли диапазон времени",
     )
     arrival_time: Mapped[time | None] = mapped_column(
-        Time(timezone=True),
+        Time(timezone=False),
         nullable=True,
         comment="Ориентировочное время прибытия",
     )
@@ -183,7 +184,13 @@ class Trip(Base):
 
     # === Статус ===
     status: Mapped[TripStatus] = mapped_column(
-        Enum(TripStatus),
+        SqlEnum(
+            TripStatus,
+            name="trip_status",
+            values_callable=lambda x: [e.value for e in x],
+            native_enum=True,
+            create_type=False,
+        ),
         nullable=False,
         default=TripStatus.DRAFT,
         index=True,
@@ -220,6 +227,14 @@ class Trip(Base):
         index=True,
         comment="Время мягкого удаления",
     )
+
+    def normalize_times(self) -> None:
+        if isinstance(self.departure_time_start, str):
+            self.departure_time_start = time.fromisoformat(self.departure_time_start[:5])
+        if isinstance(self.departure_time_end, str) and self.departure_time_end:
+            self.departure_time_end = time.fromisoformat(self.departure_time_end[:5])
+        if isinstance(self.arrival_time, str) and self.arrival_time:
+            self.arrival_time = time.fromisoformat(self.arrival_time[:5])
 
     # === Связи (Relationships) ===
 

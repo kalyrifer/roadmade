@@ -26,8 +26,8 @@ from app.db.base import Base
 
 class UserRole(str, PyEnum):
     """Роли пользователей в системе."""
-    USER = "user"
-    ADMIN = "admin"
+    user = "user"
+    admin = "admin"
 
 
 class User(Base):
@@ -99,9 +99,9 @@ class User(Base):
 
     # === Статусы и права ===
     role: Mapped[UserRole] = mapped_column(
-        Enum(UserRole),
+        Enum(UserRole, name="user_role", values_callable=lambda x: [e.value for e in x]),
         nullable=False,
-        default=UserRole.USER,
+        default=UserRole.user,
         index=True,
         comment="Роль пользователя",
     )
@@ -228,12 +228,12 @@ class User(Base):
         cascade="all, delete-orphan",
     )
 
-    # Аудит действий
-    audit_logs: Mapped[list["AuditLog"]] = relationship(
-        "AuditLog",
-        back_populates="user",
-        cascade="all, delete-orphan",
-    )
+    # Аудит действий (закомментировано, т.к. модель AuditLog не существует)
+    # audit_logs: Mapped[list["AuditLog"]] = relationship(
+    #     "AuditLog",
+    #     back_populates="user",
+    #     cascade="all, delete-orphan",
+    # )
 
     # Настройки пользователя (one-to-one)
     settings: Mapped["UserSettings"] = relationship(

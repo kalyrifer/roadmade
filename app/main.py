@@ -14,7 +14,7 @@ from app.core.config import settings
 from app.db.session import create_tables
 
 # Создание директории для загрузок
-upload_dir = Path(settings.files.UPLOAD_DIR)
+upload_dir = Path(settings.upload_dir)
 upload_dir.mkdir(parents=True, exist_ok=True)
 
 # Создание приложения
@@ -37,7 +37,9 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event() -> None:
     """Запуск при старте приложения."""
-    await create_tables()
+    # Таблицы создаются через Alembic миграции
+    # Для создания таблиц выполните: alembic upgrade head
+    pass
 
 
 # Подключение роутеров
