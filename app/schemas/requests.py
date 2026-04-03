@@ -85,6 +85,7 @@ class TripRequestPassengerDetail(BaseModel):
     id: UUID
     first_name: str
     last_name: str
+    avatar_url: Optional[str] = None
     rating_average: Optional[float] = None
     rating_count: Optional[int] = None
 
