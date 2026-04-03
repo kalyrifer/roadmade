@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, Card, Input, Modal, Skeleton } from '../components/ui';
 import { tripsApi } from '../services/api/trips';
 import { chatApi } from '../services/api/chat';
+import { reviewsApi } from '../services/api';
 import { useAuthStore } from '../stores/auth';
 import styles from './TripPage.module.css';
 
@@ -46,6 +47,21 @@ export default function TripPage() {
       }
     },
     enabled: !!id,
+  });
+
+  const { data: driverReviews } = useQuery({
+    queryKey: ['driverReviews', trip?.driver_id],
+    queryFn: async () => {
+      if (!trip?.driver_id) return null;
+      try {
+        const result = await reviewsApi.getForUser(trip.driver_id);
+        return result;
+      } catch (err) {
+        console.error('Error loading reviews:', err);
+        return null;
+      }
+    },
+    enabled: !!trip?.driver_id,
   });
 
   const formatDate = (dateString: string) => {
@@ -218,18 +234,54 @@ export default function TripPage() {
               </div>
               {driverRating !== undefined && (
                 <div className={styles.driverRating}>
-                  ★ {driverRating.toFixed(1)}
+                  ★ {driverRating.toFixed(1)} ({driverReviews?.total || 0} {t('reviews.reviews')})
                 </div>
               )}
             </div>
           </div>
         </div>
 
+        {driverReviews && driverReviews.items && driverReviews.items.length > 0 && (
+          <div className={styles.driverReviews}>
+            <h3>{t('reviews.reviewsTitle')}</h3>
+            <div className={styles.reviewsList}>
+              {driverReviews.items.slice(0, 5).map((review: any) => (
+                <div key={review.id} className={styles.reviewItem}>
+                  <div className={styles.reviewHeader}>
+                    <span className={styles.reviewAuthor}>{review.reviewer?.name || review.reviewer?.first_name || 'Пользователь'}</span>
+                    <span className={styles.reviewRating}>★ {review.rating}</span>
+                  </div>
+                  {review.comment && <p className={styles.reviewComment}>{review.comment}</p>}
+                  <div className={styles.reviewDate}>
+                    {review.created_at ? new Date(review.created_at).toLocaleDateString('ru-RU') : ''}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className={styles.details}>
           <div className={styles.detailItem}>
             <span className={styles.detailLabel}>{t('trips.availableSeats')}</span>
             <span className={styles.detailValue}>{trip.available_seats} / {trip.total_seats}</span>
           </div>
+          <div className={styles.detailItem}>
+            <span className={styles.detailLabel}>{t('trips.totalSeats')}</span>
+            <span className={styles.detailValue}>{trip.total_seats}</span>
+          </div>
+          {trip.departure_time_start && (
+            <div className={styles.detailItem}>
+              <span className={styles.detailLabel}>{t('trips.departureTime')}</span>
+              <span className={styles.detailValue}>{trip.departure_time_start}</span>
+            </div>
+          )}
+          {trip.arrival_time && (
+            <div className={styles.detailItem}>
+              <span className={styles.detailLabel}>{t('trips.arrivalTime')}</span>
+              <span className={styles.detailValue}>{trip.arrival_time}</span>
+            </div>
+          )}
           {trip.car_model && (
             <div className={styles.detailItem}>
               <span className={styles.detailLabel}>{t('trips.car')}</span>
@@ -245,6 +297,26 @@ export default function TripPage() {
             </div>
           )}
         </div>
+
+        {(trip.luggage_allowed || trip.smoking_allowed || trip.music_allowed || trip.pets_allowed) && (
+          <div className={styles.preferences}>
+            <h3>{t('trips.preferences')}</h3>
+            <div className={styles.preferenceItems}>
+              {trip.luggage_allowed && (
+                <span className={styles.preferenceBadge}>{t('trips.luggageAllowed')}</span>
+              )}
+              {trip.smoking_allowed && (
+                <span className={styles.preferenceBadge}>{t('trips.smokingAllowed')}</span>
+              )}
+              {trip.music_allowed && (
+                <span className={styles.preferenceBadge}>{t('trips.musicAllowed')}</span>
+              )}
+              {trip.pets_allowed && (
+                <span className={styles.preferenceBadge}>{t('trips.petsAllowed')}</span>
+              )}
+            </div>
+          </div>
+        )}
 
         {trip.description && (
           <div className={styles.description}>
