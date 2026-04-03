@@ -92,16 +92,19 @@ class TripRequestRepository:
         Получение активной заявки (pending или confirmed) по поездке и пассажиру.
         Используется для проверки дубликатов перед созданием новой заявки.
         """
-        from sqlalchemy import and_, text
+        from sqlalchemy import and_, or_
         
-        # Используем text() для явного приведения типов
+        # Используем явное сравнение с enum значениями (не .in_() чтобы избежать проблем с PostgreSQL enum)
         result = await self.session.execute(
             select(TripRequest)
             .where(
                 and_(
                     TripRequest.trip_id == trip_id,
                     TripRequest.passenger_id == passenger_id,
-                    TripRequest.status.in_([TripRequestStatus.PENDING, TripRequestStatus.CONFIRMED]),
+                    or_(
+                        TripRequest.status == TripRequestStatus.PENDING,
+                        TripRequest.status == TripRequestStatus.CONFIRMED
+                    ),
                     TripRequest.deleted_at.is_(None)
                 )
             )

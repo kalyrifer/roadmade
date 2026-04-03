@@ -69,7 +69,11 @@ class Notification(Base):
 
     # === Содержание уведомления ===
     type: Mapped[NotificationType] = mapped_column(
-        Enum(NotificationType),
+        Enum(
+            NotificationType,
+            values_callable=lambda x: [e.value for e in x],
+            native_enum=False,
+        ),
         nullable=False,
         index=True,
         comment="Тип уведомления",

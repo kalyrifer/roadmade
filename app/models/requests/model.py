@@ -80,7 +80,11 @@ class TripRequest(Base):
 
     # === Статус ===
     status: Mapped[TripRequestStatus] = mapped_column(
-        Enum(TripRequestStatus),
+        Enum(
+            TripRequestStatus,
+            values_callable=lambda x: [e.value for e in x],
+            native_enum=False,
+        ),
         nullable=False,
         default=TripRequestStatus.PENDING,
         index=True,
@@ -156,14 +160,6 @@ class TripRequest(Base):
         Index("ix_trip_requests_status", "status"),
         Index("ix_trip_requests_deleted_at", "deleted_at"),
         Index("ix_trip_requests_created_at", "created_at"),
-        # Уникальный индекс: один пассажир - одна активная заявка на поездку
-        Index(
-            "ix_trip_requests_unique_active",
-            "trip_id",
-            "passenger_id",
-            unique=True,
-            postgresql_where=(status == TripRequestStatus.PENDING),
-        ),
     )
 
     def __repr__(self) -> str:
