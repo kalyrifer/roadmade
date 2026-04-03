@@ -1,0 +1,147 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+}
+
+/* Hero Section */
+.hero {
+  padding: 40px 0;
+}
+
+.heroContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 24px;
+}
+
+.title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin: 0;
+}
+
+@media (min-width: 768px) {
+  .title {
+    font-size: 3rem;
+  }
+}
+
+.subtitle {
+  font-size: 1.125rem;
+  color: var(--gray-600);
+  max-width: 500px;
+  margin: 0;
+}
+
+/* Search Card */
+.searchCard {
+  width: 100%;
+  max-width: 800px;
+  margin-top: 16px;
+}
+
+.searchForm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.searchInputs {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 640px) {
+  .searchInputs {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.inputGroup {
+  width: 100%;
+}
+
+.searchButton {
+  width: 100%;
+}
+
+/* Features Section */
+.features {
+  padding: 24px 0;
+}
+
+.featuresGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+@media (min-width: 768px) {
+  .featuresGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.featureCard {
+  text-align: center;
+  padding: 24px;
+}
+
+.featureCard h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 16px 0 8px;
+  color: var(--gray-900);
+}
+
+.featureCard p {
+  font-size: 0.9375rem;
+  color: var(--gray-600);
+  margin: 0;
+}
+
+.featureIcon {
+  display: flex;
+  justify-content: center;
+  color: var(--primary);
+}
+
+/* CTA Section */
+.cta {
+  text-align: center;
+  padding: 40px 20px;
+  background: var(--gray-100);
+  border-radius: var(--radius);
+}
+
+.cta h2 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin: 0 0 12px;
+}
+
+.cta p {
+  font-size: 1rem;
+  color: var(--gray-600);
+  margin: 0 0 24px;
+}
+
+.ctaButtons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+@media (min-width: 480px) {
+  .ctaButtons {
+    flex-direction: row;
+    justify-content: center;
+  }
+}

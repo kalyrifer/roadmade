@@ -1,0 +1,246 @@
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+.searchSection {
+  margin-bottom: 32px;
+}
+
+.searchCard {
+  padding: 24px;
+}
+
+.searchForm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.searchInputs {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 640px) {
+  .searchInputs {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.resultsSection {
+  margin-top: 24px;
+}
+
+.resultsTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--gray-900);
+  margin: 0 0 20px;
+}
+
+.tripsList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tripCard {
+  padding: 20px;
+  cursor: pointer;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.tripCard:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.tripHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.driverInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.driverAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.driverName {
+  font-weight: 600;
+  color: var(--gray-900);
+}
+
+.driverRating {
+  color: var(--warning);
+  font-weight: 500;
+}
+
+.tripPrice {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.tripRoute {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.routePoint {
+  flex: 1;
+  min-width: 0;
+}
+
+.routeTime {
+  font-size: 0.875rem;
+  color: var(--gray-600);
+  margin-bottom: 4px;
+}
+
+.routeLocation {
+  font-weight: 500;
+  color: var(--gray-900);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.routeArrow {
+  color: var(--gray-400);
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.tripFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 16px;
+  border-top: 1px solid var(--gray-200);
+}
+
+.tripInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.875rem;
+  color: var(--gray-600);
+}
+
+.verified {
+  color: var(--success);
+  font-weight: 500;
+}
+
+.error {
+  padding: 16px;
+  background: var(--error-light);
+  color: var(--error);
+  border-radius: var(--radius);
+  text-align: center;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.header h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin: 0;
+}
+
+.filterSection {
+  margin-bottom: 24px;
+}
+
+.filterSelect {
+  padding: 10px 16px;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  background: white;
+  cursor: pointer;
+  min-width: 180px;
+}
+
+.filterSelect:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.emptyState {
+  text-align: center;
+  padding: 48px 24px;
+  background: var(--gray-50);
+  border-radius: var(--radius);
+}
+
+.emptyState p {
+  color: var(--gray-600);
+  margin-bottom: 20px;
+  font-size: 1rem;
+}
+
+.routeInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cityName {
+  font-weight: 600;
+  color: var(--gray-900);
+}
+
+.statusBadge {
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.statusDraft {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.statusPublished {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.statusActive {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.statusCompleted {
+  background: #e0e7ff;
+  color: #4f46e5;
+}
+
+.statusCancelled {
+  background: #fee2e2;
+  color: #dc2626;
+}

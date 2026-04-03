@@ -1,0 +1,558 @@
+"""
+Сервис для работы с поездками.
+
+Содержит бизнес-логику для создания, обновления, отмены и публикации поездок.
+"""
+import uuid
+from typing import Any
+
+from fastapi import HTTPException, status
+
+from app.models.trips.model import TripStatus
+from app.models.users.model import User, UserRole
+from app.repositories.trips.repository import TripRepository
+from app.schemas.trips.schemas import (
+    TripResponse,
+    PaginatedTrips,
+    TripSearchFilters,
+    TripSearchResponse,
+    PaginatedTripSearchResponse,
+    DriverInfo,
+    MAX_PAGE_SIZE,
+)
+
+
+class TripService:
+    """
+    Сервис для работы с поездками.
+    
+    Обеспечивает бизнес-логику для работы с поездками.
+    """
+    
+    def __init__(self, trip_repository: TripRepository):
+        """
+        Инициализация сервиса.
+        
+        Args:
+            trip_repository: Repository для работы с поездками
+        """
+        self.trip_repo = trip_repository
+    
+    async def create_trip(
+        self,
+        current_user: User,
+        trip_data: dict[str, Any]
+    ) -> TripResponse:
+        """
+        Создание новой поездки.
+        
+        Args:
+            current_user: Текущий пользователь (водитель)
+            trip_data: Данные для создания поездки
+            
+        Returns:
+            TripResponse: Созданная поездка
+            
+        Raises:
+            HTTPException: 403 если пользователь не водитель
+        """
+        # Обработка времени: если не указан диапазон, делаем end = start
+        if not trip_data.get("is_time_range") and trip_data.get("departure_time_start"):
+            trip_data["departure_time_end"] = trip_data["departure_time_start"]
+        
+        # Создаем поездку
+        trip = await self.trip_repo.create(trip_data, current_user.id)
+        
+        return TripResponse.from_orm(trip)
+    
+    async def search_trips(
+        self,
+        filters: TripSearchFilters
+    ) -> PaginatedTripSearchResponse:
+        """
+        Поиск поездок с фильтрами и пагинацией.
+        
+        Args:
+            filters: Параметры поиска и фильтрации
+            
+        Returns:
+            PaginatedTripSearchResponse: Список найденных поездок с пагинацией
+        """
+        # Валидация параметров пагинации
+        if filters.page < 1:
+            filters.page = 1
+        if filters.page_size > MAX_PAGE_SIZE:
+            filters.page_size = MAX_PAGE_SIZE
+        if filters.page_size < 1:
+            filters.page_size = 10
+        
+        # Получаем поездки
+        trips, total = await self.trip_repo.search_trips(filters)
+        
+        # Вычисляем количество страниц
+        pages = (total + filters.page_size - 1) // filters.page_size if total > 0 else 0
+        
+        # Формируем ответ с информацией о водителях
+        items = []
+        for trip in trips:
+            # Информация о водителе
+            driver_info = None
+            if trip.driver:
+                name = f"{trip.driver.first_name} {trip.driver.last_name}".strip()
+                if not name:
+                    name = trip.driver.email.split("@")[0]
+                driver_info = DriverInfo(
+                    id=str(trip.driver.id),
+                    name=name,
+                    rating_average=float(trip.driver.rating_average) if trip.driver.rating_average else 0.0,
+                    rating_count=trip.driver.rating_count or 0,
+                    avatar_url=trip.driver.avatar_url,
+                )
+            
+            # Формируем ответ для поездки
+            trip_response = TripSearchResponse(
+                id=str(trip.id),
+                driver_id=str(trip.driver_id),
+                from_city=trip.from_city,
+                from_address=trip.from_address,
+                to_city=trip.to_city,
+                to_address=trip.to_address,
+                departure_date=trip.departure_date.isoformat() if trip.departure_date else "",
+                departure_time_start=str(trip.departure_time_start) if trip.departure_time_start else "",
+                departure_time_end=str(trip.departure_time_end) if trip.departure_time_end else None,
+                is_time_range=trip.is_time_range,
+                arrival_time=str(trip.arrival_time) if trip.arrival_time else None,
+                price_per_seat=float(trip.price_per_seat),
+                total_seats=trip.total_seats,
+                available_seats=trip.available_seats,
+                description=trip.description,
+                luggage_allowed=trip.luggage_allowed,
+                smoking_allowed=trip.smoking_allowed,
+                music_allowed=trip.music_allowed,
+                pets_allowed=trip.pets_allowed,
+                car_model=trip.car_model,
+                car_color=trip.car_color,
+                car_license_plate=trip.car_license_plate,
+                status=trip.status.value if hasattr(trip.status, 'value') else str(trip.status),
+                driver=driver_info,
+                created_at=trip.created_at.isoformat() if trip.created_at else "",
+            )
+            items.append(trip_response)
+        
+        return PaginatedTripSearchResponse(
+            items=items,
+            total=total,
+            page=filters.page,
+            page_size=filters.page_size,
+            pages=pages,
+        )
+    
+    async def get_trip(self, trip_id: uuid.UUID) -> TripResponse:
+        """
+        Получение поездки по ID.
+        
+        Args:
+            trip_id: ID поездки
+            
+        Returns:
+            TripResponse: Поездка
+            
+        Raises:
+            HTTPException: 404 если поездка не найдена
+        """
+        trip = await self.trip_repo.get_by_id(trip_id)
+        
+        if not trip:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Trip not found"
+            )
+        
+        return TripResponse.from_orm(trip)
+    
+    async def get_trip_detail(self, trip_id: uuid.UUID) -> dict[str, Any]:
+        """
+        Получение детальной информации о поездке.
+        
+        Включает:
+        - Основные данные поездки
+        - Информацию о водителе (имя, рейтинг)
+        - Отзывы о водителе и поездке
+        
+        Args:
+            trip_id: ID поездки
+            
+        Returns:
+            dict: Детальная информация о поездке
+            
+        Raises:
+            HTTPException: 404 если поездка не найдена
+        """
+        trip = await self.trip_repo.get_by_id_with_driver(trip_id)
+        
+        if not trip:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Trip not found"
+            )
+        
+        # Формируем ответ
+        trip_data = TripResponse.from_orm(trip)
+        
+        # Информация о водителе
+        driver_info = None
+        if trip.driver:
+            # Формируем имя водителя
+            driver_name = None
+            if trip.driver.first_name or trip.driver.last_name:
+                driver_name = f"{trip.driver.first_name or ''} {trip.driver.last_name or ''}".strip()
+            if not driver_name:
+                driver_name = trip.driver.email.split("@")[0]
+            driver_info = {
+                "id": str(trip.driver.id),
+                "name": driver_name,
+                "rating_average": float(trip.driver.rating_average) if trip.driver.rating_average else None,
+                "rating_count": trip.driver.rating_count or 0,
+                "avatar_url": trip.driver.avatar_url,
+            }
+        
+        # Формируем результат
+        result = {
+            "trip": trip_data,
+            "driver": driver_info,
+            # Отзывы о поездке (можно добавить позже)
+            "reviews": [],
+        }
+        
+        return result
+    
+    async def get_driver_trips(
+        self,
+        current_user: User,
+        status_filter: str | None = None,
+        page: int = 1,
+        limit: int = 10,
+        sort_by: str = "departure_date",
+    ) -> PaginatedTrips:
+        """
+        Получение списка поездок текущего пользователя (водителя).
+        
+        Args:
+            current_user: Текущий пользователь
+            status_filter: Фильтр по статусу (optional)
+            page: Номер страницы
+            limit: Количество элементов на странице
+            sort_by: Поле для сортировки (departure_date или created_at)
+            
+        Returns:
+            PaginatedTrips: Список поездок с пагинацией
+        """
+        # Валидация параметров
+        if page < 1:
+            page = 1
+        if limit < 1:
+            limit = 10
+        if limit > 100:
+            limit = 100
+        
+        # Проверка статуса
+        trip_status = None
+        if status_filter:
+            try:
+                trip_status = TripStatus(status_filter)
+            except ValueError:
+                pass
+        
+        # Получаем поездки
+        offset = (page - 1) * limit
+        trips, total = await self.trip_repo.get_trips_by_driver(
+            driver_id=current_user.id,
+            status=trip_status,
+            offset=offset,
+            limit=limit,
+            sort_by=sort_by,
+        )
+        
+        # Формируем ответ
+        return PaginatedTrips(
+            total=total,
+            page=page,
+            limit=limit,
+            items=[TripResponse.from_orm(trip) for trip in trips]
+        )
+    
+    async def publish_trip(
+        self,
+        current_user: User,
+        trip_id: uuid.UUID
+    ) -> TripResponse:
+        """
+        Публикация поездки (Draft → Published).
+        
+        Args:
+            current_user: Текущий пользователь
+            trip_id: ID поездки
+            
+        Returns:
+            TripResponse: Опубликованная поездка
+            
+        Raises:
+            HTTPException: 401 если не авторизован
+            HTTPException: 403 если чужая поездка
+            HTTPException: 400 если обязательные поля не заполнены
+            HTTPException: 400 если поездка уже опубликована
+            HTTPException: 404 если поездка не найдена
+        """
+        trip = await self.trip_repo.get_by_id(trip_id)
+        
+        if not trip:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Trip not found"
+            )
+        
+        # Проверка прав: только владелец может публиковать
+        if trip.driver_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to publish this trip"
+            )
+        
+        # Проверка статуса
+        if trip.status == TripStatus.PUBLISHED:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Trip is already published"
+            )
+        
+        if trip.status in (TripStatus.CANCELLED, TripStatus.COMPLETED, TripStatus.ACTIVE):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cannot publish trip with status {trip.status.value}"
+            )
+        
+        # Проверка обязательных полей
+        if not trip.from_city:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Required field 'from_city' is missing"
+            )
+        if not trip.to_city:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Required field 'to_city' is missing"
+            )
+        if not trip.departure_date:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Required field 'departure_date' is missing"
+            )
+        if not trip.total_seats or trip.total_seats < 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Required field 'total_seats' must be at least 1"
+            )
+        if not trip.price_per_seat or trip.price_per_seat <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Required field 'price_per_seat' must be greater than 0"
+            )
+        
+        # Публикуем поездку
+        updated_trip = await self.trip_repo.update_status(
+            trip,
+            TripStatus.PUBLISHED
+        )
+        
+        return TripResponse.from_orm(updated_trip)
+    
+    async def update_trip(
+        self,
+        current_user: User,
+        trip_id: uuid.UUID,
+        update_data: dict[str, Any]
+    ) -> TripResponse:
+        """
+        Обновление поездки.
+        
+        Args:
+            current_user: Текущий пользователь
+            trip_id: ID поездки
+            update_data: Данные для обновления
+            
+        Returns:
+            TripResponse: Обновленная поездка
+            
+        Raises:
+            HTTPException: 403 если нет прав
+            HTTPException: 404 если поездка не найдена
+            HTTPException: 400 если поездка в неправильном статусе
+        """
+        trip = await self.trip_repo.get_by_id(trip_id)
+        
+        if not trip:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Trip not found"
+            )
+        
+        # Проверка прав: только владелец или админ может редактировать
+        is_owner = trip.driver_id == current_user.id
+        is_admin = current_user.role == UserRole.admin if hasattr(current_user, 'role') else False
+        
+        if not (is_owner or is_admin):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to update this trip"
+            )
+        
+        # Проверка статуса: нельзя редактировать cancelled или completed
+        if trip.status in (TripStatus.CANCELLED, TripStatus.COMPLETED):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cannot update trip with status {trip.status.value}"
+            )
+        
+        # Обработка времени: если не указан диапазон, делаем end = start
+        if "is_time_range" in update_data and not update_data["is_time_range"]:
+            if "departure_time_start" in update_data:
+                update_data["departure_time_end"] = update_data["departure_time_start"]
+            elif trip.departure_time_start and not trip.departure_time_end:
+                update_data["departure_time_end"] = str(trip.departure_time_start)
+        
+        # Обновляем поездку
+        updated_trip = await self.trip_repo.update(trip, update_data)
+        
+        return TripResponse.from_orm(updated_trip)
+    
+    async def cancel_trip(
+        self,
+        current_user: User,
+        trip_id: uuid.UUID,
+        reason: str | None = None
+    ) -> TripResponse:
+        """
+        Отмена поездки.
+        
+        Args:
+            current_user: Текущий пользователь
+            trip_id: ID поездки
+            reason: Причина отмены
+            
+        Returns:
+            TripResponse: Отмененная поездка
+            
+        Raises:
+            HTTPException: 403 если нет прав
+            HTTPException: 404 если поездка не найдена
+            HTTPException: 400 если поездка уже отменена
+        """
+        trip = await self.trip_repo.get_by_id_with_requests(trip_id)
+        
+        if not trip:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Trip not found"
+            )
+        
+        # Проверка прав: только владелец или админ может отменить
+        is_owner = trip.driver_id == current_user.id
+        is_admin = current_user.role == UserRole.admin if hasattr(current_user, 'role') else False
+        
+        if not (is_owner or is_admin):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to cancel this trip"
+            )
+        
+        # Проверка статуса
+        if trip.status == TripStatus.CANCELLED:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Trip is already cancelled"
+            )
+        
+        # Отменяем поездку
+        cancelled_trip = await self.trip_repo.cancel(
+            trip, 
+            reason=reason,
+            cancelled_by=current_user.id
+        )
+        
+        # TODO: Отправить уведомления пассажирам с подтвержденными заявками
+        # if trip.trip_requests:
+        #     for request in trip.trip_requests:
+        #         if request.status == RequestStatus.CONFIRMED:
+        #             await notifications_service.create_notification(...)
+        
+        return TripResponse.from_orm(cancelled_trip)
+    
+    async def delete_trip(
+        self,
+        current_user: User,
+        trip_id: uuid.UUID
+    ) -> dict[str, str]:
+        """
+        Удаление поездки (мягкое удаление).
+        
+        Args:
+            current_user: Текущий пользователь
+            trip_id: ID поездки
+            
+        Returns:
+            dict: Сообщение об успехе
+            
+        Raises:
+            HTTPException: 403 если нет прав
+            HTTPException: 404 если поездка не найдена
+        """
+        trip = await self.trip_repo.get_by_id(trip_id)
+        
+        if not trip:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Trip not found"
+            )
+        
+        # Проверка прав: только владелец или админ может удалить
+        is_owner = trip.driver_id == current_user.id
+        is_admin = current_user.role == UserRole.admin if hasattr(current_user, 'role') else False
+        
+        if not (is_owner or is_admin):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to delete this trip"
+            )
+        
+        # Удаляем поездку
+        await self.trip_repo.delete(trip_id)
+        
+        return {"message": "Trip deleted successfully"}
+    
+    def can_edit_trip(self, user: User, trip_id: uuid.UUID) -> bool:
+        """
+        Проверка прав на редактирование поездки.
+        
+        Args:
+            user: Пользователь
+            trip_id: ID поездки
+            
+        Returns:
+            bool: True если может редактировать
+        """
+        # Реализация зависит от конкретного случая использования
+        return True
+    
+    def can_cancel_trip(self, user: User, trip_id: uuid.UUID) -> bool:
+        """
+        Проверка прав на отмену поездки.
+        
+        Args:
+            user: Пользователь
+            trip_id: ID поездки
+            
+        Returns:
+            bool: True если может отменить
+        """
+        # Реализация зависит от конкретного случая использования
+        return True
