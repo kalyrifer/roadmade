@@ -1,0 +1,236 @@
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+.card {
+  padding: 32px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 32px;
+}
+
+.title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin: 0;
+}
+
+.price {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.route {
+  padding: 24px;
+  background: var(--gray-100);
+  border-radius: var(--radius);
+  margin-bottom: 24px;
+}
+
+.routePoint {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.routeTime {
+  font-size: 0.875rem;
+  color: var(--gray-600);
+}
+
+.routeAddress {
+  font-weight: 600;
+  color: var(--gray-900);
+}
+
+.routeDivider {
+  text-align: center;
+  color: var(--gray-400);
+  font-size: 1.25rem;
+  margin: 12px 0;
+}
+
+.viaPoints,
+.driver,
+.details,
+.description {
+  margin-bottom: 24px;
+}
+
+.viaPoints h3,
+.driver h3,
+.details h3,
+.description h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--gray-900);
+  margin: 0 0 12px;
+}
+
+.viaPoint {
+  padding: 8px 12px;
+  background: var(--gray-100);
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+  font-size: 0.9375rem;
+}
+
+.driverInfo {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.driverAvatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.driverName {
+  font-weight: 600;
+  color: var(--gray-900);
+  font-size: 1.125rem;
+}
+
+.driverRating {
+  color: var(--warning);
+  margin-top: 4px;
+}
+
+.detailItem {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.detailLabel {
+  color: var(--gray-600);
+}
+
+.detailValue {
+  font-weight: 500;
+  color: var(--gray-900);
+}
+
+.description p {
+  color: var(--gray-700);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.actions {
+  margin-top: 32px;
+  display: flex;
+  justify-content: center;
+}
+
+.error {
+  text-align: center;
+  padding: 32px;
+  color: var(--error);
+}
+
+.bookingModal {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 320px;
+}
+
+.bookingInfo {
+  color: var(--gray-700);
+}
+
+.bookingForm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.bookingError {
+  color: var(--error);
+}
+
+.bookingActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.ownerActions {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--gray-200);
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.ownerActions > button {
+  padding: 10px 20px;
+  font-weight: 600;
+  border-radius: 10px;
+}
+
+.ownerBadge {
+  margin-top: 8px;
+}
+
+.statusBadge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.statusDraft {
+  background: rgba(107, 114, 128, 0.12);
+  color: #6b7280;
+}
+
+.statusPublished {
+  background: rgba(59, 130, 246, 0.12);
+  color: #3b82f6;
+}
+
+.statusActive {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+}
+
+.statusCompleted {
+  background: rgba(99, 102, 241, 0.12);
+  color: #6366f1;
+}
+
+.statusCancelled {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+
+.deleteModal {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 320px;
+}
+
+.deleteModal p {
+  color: var(--gray-700);
+  margin: 0;
+}
