@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, Input, Card } from '../components/ui';
 import { usersApi, getAccessToken } from '../services/api';
 import { useAuthStore } from '../stores/auth';
@@ -10,6 +10,7 @@ import styles from './ProfilePage.module.css';
 export default function ProfilePage() {
   const { t } = useTranslation();
   const { logout } = useAuthStore();
+  const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -325,7 +326,13 @@ export default function ProfilePage() {
 
           {/* Logout button at bottom right */}
           <div className={styles.logoutContainer}>
-            <button className={styles.logoutButton} onClick={() => logout()}>
+            <button 
+              className={styles.logoutButton} 
+              onClick={async () => {
+                await queryClient.clear();
+                await logout();
+              }}
+            >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
                 <polyline points="16 17 21 12 16 7" />

@@ -1,6 +1,18 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import authApi, { User } from '../services/api/auth';
+
+// Constants
+const AUTH_STORAGE_KEY = 'auth-storage';
+
+// Helper to clear persisted auth storage
+const clearAuthStorage = () => {
+  try {
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+  } catch (e) {
+    console.error('Failed to clear auth storage:', e);
+  }
+};
 
 interface AuthState {
   user: User | null;
@@ -85,6 +97,8 @@ export const useAuthStore = create<AuthState>()(
           });
           localStorage.removeItem('token');
           localStorage.removeItem('refreshToken');
+          // Clear persisted auth storage to prevent stale data on re-login
+          clearAuthStorage();
         }
       },
 
