@@ -237,3 +237,40 @@ h6 { font-size: var(--font-size-base); }
   .lg\:hidden { display: none; }
   .lg\:block { display: block; }
 }
+
+/* Leaflet Map Custom Styles */
+.leaflet-control-zoom {
+  border: none !important;
+  border-radius: 8px !important;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+.leaflet-control-zoom a {
+  background: #ffffff !important;
+  color: #374151 !important;
+  width: 36px !important;
+  height: 36px !important;
+  line-height: 36px !important;
+  font-size: 18px !important;
+  border: none !important;
+  border-radius: 0 !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background: #f3f4f6 !important;
+}
+
+.leaflet-control-zoom-in {
+  border-bottom: 1px solid #e5e7eb !important;
+}
+
+/* Hide default attribution */
+.leaflet-control-attribution {
+  display: none !important;
+}
+
+/* Hide marker shadows */
+.leaflet-marker-icon {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}

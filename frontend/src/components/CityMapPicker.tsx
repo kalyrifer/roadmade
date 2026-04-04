@@ -226,7 +226,7 @@ export default function CityMapPicker({
               opacity: isLoading ? 0.7 : 1,
             }}
           >
-            {selectingFor === 'from' ? '点击地图选择位置...' : '📍 Указать на карте'}
+            {selectingFor === 'from' ? 'Нажмите на карту...' : 'Указать на карте'}
           </button>
         </div>
 
@@ -282,7 +282,7 @@ export default function CityMapPicker({
               opacity: isLoading ? 0.7 : 1,
             }}
           >
-            {selectingFor === 'to' ? '点击地图选择位置...' : '📍 Указать на карте'}
+            {selectingFor === 'to' ? 'Нажмите на карту...' : 'Указать на карте'}
           </button>
         </div>
       </div>
@@ -354,9 +354,10 @@ export default function CityMapPicker({
           zoom={DEFAULT_ZOOM}
           style={{ height: '100%', width: '100%' }}
           scrollWheelZoom={true}
+          zoomControl={false}
         >
           <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            attribution=''
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
           <MapClickHandler onMapClick={handleMapClick} />
