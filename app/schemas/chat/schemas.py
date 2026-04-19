@@ -42,6 +42,12 @@ class ConversationCreate(ConversationBase):
     participant_ids: list[UUID] = Field(..., min_length=2, max_length=10, description="ID участников (минимум 2)")
 
 
+class ConversationByTripCreate(BaseModel):
+    """Схема для создания чата по поездке с первым сообщением."""
+    trip_id: UUID = Field(..., description="ID поездки")
+    content: str = Field(default="", description="Текст первого сообщения (опционально)")
+
+
 class MessageCreate(MessageBase):
     """Схема для создания сообщения."""
     content: str = Field(..., min_length=1, max_length=5000, description="Текст сообщения")
@@ -89,9 +95,21 @@ class ConversationParticipantRead(ConversationParticipantBase):
     user: Optional[UserBrief] = None
 
 
+class TripBrief(BaseModel):
+    """Краткая информация о поездке."""
+    id: str = ""
+    from_city: str = ""
+    to_city: str = ""
+    departure_date: Optional[str] = None
+    departure_time_start: Optional[str] = None
+
+
 class ConversationRead(ConversationBase):
     """Схема для чтения чата."""
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        from_attributes=True,
+        extra='ignore',  # Ignore extra fields from model
+    )
 
     id: UUID
     trip_id: UUID
@@ -99,8 +117,7 @@ class ConversationRead(ConversationBase):
     updated_at: datetime
     last_message_at: Optional[datetime] = None
     participants: list[ConversationParticipantRead] = []
-    last_message: Optional["MessageRead"] = None
-    trip: Optional[dict] = None  # { from_city, to_city, departure_date, departure_time_start }
+    trip: Optional[dict] = None  # Flexible - can be dict with trip info or None
 
 
 class MessageRead(MessageBase):

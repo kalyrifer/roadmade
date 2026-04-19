@@ -85,24 +85,60 @@ class ChatService:
         user_id: UUID,
     ) -> bool:
         """Проверка, является ли пользователь участником поездки."""
-        # Участником поездки является водитель (создатель) или пассажир с подтвержденной заявкой
+        # Участником поездки является водитель
         if trip.driver_id == user_id:
             return True
 
-        # Проверяем, есть ли подтвержденная заявка у пользователя
-        from app.models.requests.model import TripRequest, TripRequestStatus
+        # Проверяем, есть ли любая заявка у пользователя
+        from app.models.requests.model import TripRequest
 
         result = await self.session.execute(
             select(TripRequest).where(
                 and_(
                     TripRequest.trip_id == trip.id,
                     TripRequest.passenger_id == user_id,
-                    TripRequest.status == TripRequestStatus.CONFIRMED,
                 )
             )
         )
         request = result.scalar_one_or_none()
         return request is not None
+
+    async def _can_contact_driver(
+        self,
+        trip: Trip,
+        user_id: UUID,
+    ) -> bool:
+        """Проверка, может ли пользователь связаться с водителем."""
+        # Водитель может всегда
+        if trip.driver_id == user_id:
+            return True
+        
+        # Пассажир может если:
+        # 1. Есть активная/подтвержденная заявка
+        # 2. Или поездка опубликована/активна
+        from app.models.requests.model import TripRequest, TripRequestStatus
+        from app.models.trips.model import TripStatus
+        
+        result = await self.session.execute(
+            select(TripRequest).where(
+                and_(
+                    TripRequest.trip_id == trip.id,
+                    TripRequest.passenger_id == user_id,
+                    TripRequest.status.in_([
+                        TripRequestStatus.PENDING,
+                        TripRequestStatus.CONFIRMED,
+                        TripRequestStatus.CANCELLED,
+                    ])
+                )
+            )
+        )
+        request = result.scalar_one_or_none()
+        
+        if request:
+            return True
+        
+        # Если нет заявки - можно писать если поездка не отменена
+        return trip.status != TripStatus.CANCELLED
 
     async def _check_conversation_participant(
         self,
@@ -184,16 +220,10 @@ class ChatService:
         if not trip:
             raise TripNotFoundError("Поездка не найдена")
 
-        # Проверяем, что поездка доступна
-        if trip.status not in [TripStatus.PUBLISHED, TripStatus.ACTIVE]:
-            raise ChatServiceError(
-                "Нельзя отправлять сообщения для неактивной поездки"
-            )
-
-        # Проверяем, что отправитель - участник поездки
-        if not await self._is_trip_participant(trip, sender_id):
+        # Проверяем, что отправитель может связаться с водителем
+        if not await self._can_contact_driver(trip, sender_id):
             raise NotParticipantError(
-                "Вы не являетесь участником этой поездки"
+                "Вы не можете связаться с водителем этой поездки"
             )
 
         # Ищем существующий чат или создаем новый
@@ -202,35 +232,51 @@ class ChatService:
         if not conversation:
             conversation = await self.repository.create_conversation(trip_id)
 
-            # Добавляем участников: водителя и отправителя
-            await self.repository.add_participant(conversation.id, trip.driver_id)
-            await self.repository.add_participant(conversation.id, sender_id)
+            # Добавляем водителя
+            try:
+                await self.repository.add_participant(conversation.id, trip.driver_id)
+                await self.session.flush()
+            except Exception as e:
+                logger.warning(f"Driver participant already exists: {e}")
+            
+            # Добавляем отправителя (если это не водитель)
+            if sender_id != trip.driver_id:
+                try:
+                    await self.repository.add_participant(conversation.id, sender_id)
+                    await self.session.flush()
+                except Exception as e:
+                    logger.warning(f"Sender participant already exists: {e}")
 
-            await self.session.flush()
             await self.session.refresh(conversation)
+        else:
+            # Проверяем, что отправитель - участник чата
+            participant = await self.repository.get_participant(conversation.id, sender_id)
+            if not participant:
+                try:
+                    await self.repository.add_participant(conversation.id, sender_id)
+                    await self.session.flush()
+                except Exception as e:
+                    # Участник уже добавлен
+                    logger.warning(f"Participant already exists: {e}")
 
-        # Проверяем, что отправитель - участник чата
-        participant = await self.repository.get_participant(conversation.id, sender_id)
-        if not participant:
-            await self.repository.add_participant(conversation.id, sender_id)
+        # Создаем сообщение только если контент не пустой
+        message = None
+        if content and content.strip():
+            message = await self.repository.create_message(
+                conversation.id,
+                sender_id,
+                content,
+            )
+
             await self.session.flush()
+            await self.session.refresh(message)
 
-        # Создаем сообщение
-        message = await self.repository.create_message(
-            conversation.id,
-            sender_id,
-            content,
-        )
-
-        await self.session.flush()
-        await self.session.refresh(message)
-
-        # Отправляем уведомление о новом сообщении
-        await self._send_message_notification(
-            conversation_id=conversation.id,
-            sender_id=sender_id,
-            message_content=content,
-        )
+            # Отправляем уведомление о новом сообщении
+            await self._notify_message_recipient(
+                conversation_id=conversation.id,
+                sender_id=sender_id,
+                message_content=content,
+            )
 
         return conversation, message
 
@@ -312,6 +358,7 @@ class ChatService:
             trip_data = None
             if conv.trip:
                 trip_data = {
+                    "id": str(conv.trip.id),  # Add trip.id - this was missing!
                     "from_city": conv.trip.from_city,
                     "to_city": conv.trip.to_city,
                     "departure_date": conv.trip.departure_date.isoformat() if conv.trip.departure_date else None,
@@ -351,10 +398,10 @@ class ChatService:
         if not trip:
             raise TripNotFoundError("Поездка не найдена")
 
-        # Проверяем, что пользователь - участник поездки
-        if not await self._is_trip_participant(trip, user_id):
+        # Проверяем права доступа
+        if not await self._can_contact_driver(trip, user_id):
             raise NotParticipantError(
-                "Вы не являетесь участником этой поездки"
+                "Вы не можете просматривать чаты этой поездки"
             )
 
         offset = (page - 1) * page_size

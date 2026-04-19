@@ -18,8 +18,11 @@ interface ConversationWithOther {
     sender_id: string;
   };
   trip?: {
+    id: string;
     from_city: string;
     to_city: string;
+    departure_date?: string;
+    departure_time_start?: string;
   };
   participants?: Array<{
     user_id: string;
@@ -56,16 +59,24 @@ export default function ChatListPage() {
     
     return conversationsData.items.map((conv) => {
       const otherParticipant = conv.participants?.find((p) => p.user_id !== userId);
-      const otherUser = otherParticipant?.user || { id: '', name: 'Unknown' };
+      const otherUser = otherParticipant?.user;
+      
+      // First try trip name if available
+      const tripName = conv.trip?.from_city && conv.trip?.to_city
+        ? `${conv.trip.from_city} → ${conv.trip.to_city}`
+        : null;
+      
+      // Then try other participant's name
+      const otherName = otherUser?.first_name && otherUser?.last_name
+        ? `${otherUser.first_name} ${otherUser.last_name}`
+        : null;
       
       return {
         ...conv,
         otherUser: {
-          id: otherUser.id || otherParticipant?.user_id || '',
-          name: otherUser.first_name && otherUser.last_name 
-            ? `${otherUser.first_name} ${otherUser.last_name}` 
-            : 'Unknown',
-          avatar_url: otherUser.avatar_url,
+          id: (otherUser?.id || otherParticipant?.user_id) || '',
+          name: tripName || otherName || 'Unknown',
+          avatar_url: otherUser?.avatar_url,
         },
       };
     });
@@ -163,6 +174,14 @@ export default function ChatListPage() {
                 
                 <div className={styles.trip}>
                   {conv.trip?.from_city} → {conv.trip?.to_city}
+                  {conv.trip?.departure_date && (
+                    <span className={styles.date}>
+                      {new Date(conv.trip.departure_date).toLocaleDateString('ru-RU', {
+                        day: 'numeric',
+                        month: 'short',
+                      })}
+                    </span>
+                  )}
                 </div>
                 
                 <div className={styles.lastMessage}>

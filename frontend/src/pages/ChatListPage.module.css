@@ -83,6 +83,14 @@
 .trip {
   font-size: 14px;
   color: var(--color-text-secondary, #666);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.date {
+  color: var(--color-primary, #4a90d9);
+  font-weight: 500;
 }
 
 .lastMessage {

@@ -17,6 +17,14 @@ export interface Message {
   };
 }
 
+export interface TripInfo {
+  id: string;
+  from_city: string;
+  to_city: string;
+  departure_date?: string;
+  departure_time_start?: string;
+}
+
 export interface Conversation {
   id: string;
   trip_id: string;
@@ -25,19 +33,7 @@ export interface Conversation {
   last_message_at?: string;
   participants: ConversationParticipant[];
   last_message?: Message;
-  trip?: {
-    from_city: string;
-    to_city: string;
-    departure_date: string;
-    departure_time_start: string;
-    driver_id: string;
-    driver?: {
-      id: string;
-      first_name: string;
-      last_name: string;
-      avatar_url?: string;
-    };
-  };
+  trip?: TripInfo;
 }
 
 export interface ConversationParticipant {

@@ -16,12 +16,15 @@ WebSocket: app/api/websocket.py
 import logging
 from uuid import UUID
 
+logger = logging.getLogger(__name__)
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import CurrentUser, get_current_user
 from app.db.session import get_db
 from app.schemas.chat import (
+    ConversationByTripCreate,
     ConversationCreate,
     ConversationCreateResponse,
     ConversationList,
@@ -59,27 +62,23 @@ async def get_chat_service(
     "Автоматически добавляет водителя и отправителя как участников.",
 )
 async def create_conversation_by_trip(
-    trip_id: UUID,
-    data: MessageCreate,
+    data: ConversationByTripCreate,
     current_user: CurrentUser,
     chat_service: ChatService = Depends(get_chat_service),
 ) -> ConversationCreateResponse:
     """Создание чата для поездки с первым сообщением."""
     try:
         conversation, message = await chat_service.create_conversation_with_message(
-            trip_id=trip_id,
+            trip_id=data.trip_id,
             sender_id=current_user.id,
             content=data.content,
         )
         await chat_service.session.commit()
-        return ConversationCreateResponse(
-            id=conversation.id,
-            trip_id=conversation.trip_id,
-            created_at=conversation.created_at,
-            updated_at=conversation.updated_at,
-            last_message_at=conversation.last_message_at,
-            participants=[],
-            last_message=MessageCreateResponse(
+        
+        # Build response, handling case when message is None
+        last_message = None
+        if message:
+            last_message = MessageCreateResponse(
                 id=message.id,
                 conversation_id=message.conversation_id,
                 sender_id=message.sender_id,
@@ -87,7 +86,16 @@ async def create_conversation_by_trip(
                 is_read=message.is_read,
                 created_at=message.created_at,
                 updated_at=message.updated_at,
-            ),
+            )
+        
+        return ConversationCreateResponse(
+            id=conversation.id,
+            trip_id=conversation.trip_id,
+            created_at=conversation.created_at,
+            updated_at=conversation.updated_at,
+            last_message_at=conversation.last_message_at,
+            participants=[],
+            last_message=last_message,
         )
     except TripNotFoundError:
         raise HTTPException(
@@ -125,7 +133,51 @@ async def create_conversation(
             creator_id=current_user.id,
         )
         await chat_service.session.commit()
-        return ConversationCreateResponse.model_validate(conversation)
+        
+        # Build response manually to avoid async SQLAlchemy issues
+        # Get trip info
+        trip_info = None
+        if conversation.trip:
+            trip = conversation.trip
+            trip_info = {
+                "id": str(trip.id),
+                "from_city": trip.from_city,
+                "to_city": trip.to_city,
+                "departure_date": trip.departure_date.isoformat() if trip.departure_date else None,
+                "departure_time_start": str(trip.departure_time_start) if trip.departure_time_start else None,
+            }
+        
+        # Get participants
+        participants = []
+        for p in conversation.participants:
+            user_data = None
+            if p.user:
+                user_data = {
+                    "id": str(p.user.id),
+                    "first_name": p.user.first_name,
+                    "last_name": p.user.last_name,
+                    "avatar_url": p.user.avatar_url,
+                }
+            participants.append({
+                "id": str(p.id),
+                "conversation_id": str(p.conversation_id),
+                "user_id": str(p.user_id),
+                "is_muted": p.is_muted,
+                "last_read_message_id": str(p.last_read_message_id) if p.last_read_message_id else None,
+                "joined_at": p.joined_at.isoformat(),
+                "user": user_data,
+            })
+        
+        return ConversationCreateResponse(
+            id=conversation.id,
+            trip_id=conversation.trip_id,
+            created_at=conversation.created_at,
+            updated_at=conversation.updated_at,
+            last_message_at=conversation.last_message_at.isoformat() if conversation.last_message_at else None,
+            participants=participants,
+            last_message=None,
+            trip=trip_info,
+        )
     except TripNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -222,11 +274,59 @@ async def get_conversation(
 ) -> ConversationCreateResponse:
     """Получение чата по ID."""
     try:
+        logger.info(f"get_conversation: conversation_id={conversation_id}, user_id={current_user.id}")
         conversation = await chat_service.get_conversation(
             conversation_id=conversation_id,
             user_id=current_user.id,
         )
-        return ConversationCreateResponse.model_validate(conversation)
+        logger.info(f"get_conversation: got conversation, id={conversation.id}, trip_id={conversation.trip_id}")
+        # Build response manually to avoid async SQLAlchemy issues
+        # Get trip info
+        trip_info = None
+        if conversation.trip:
+            trip = conversation.trip
+            trip_info = {
+                "id": str(trip.id),
+                "from_city": trip.from_city,
+                "to_city": trip.to_city,
+                "departure_date": trip.departure_date.isoformat() if trip.departure_date else None,
+                "departure_time_start": str(trip.departure_time_start) if trip.departure_time_start else None,
+            }
+        
+        # Get participants
+        participants = []
+        for p in conversation.participants:
+            user_data = None
+            if p.user:
+                user_data = {
+                    "id": str(p.user.id),
+                    "first_name": p.user.first_name,
+                    "last_name": p.user.last_name,
+                    "avatar_url": p.user.avatar_url,
+                }
+            participants.append({
+                "id": str(p.id),
+                "conversation_id": str(p.conversation_id),
+                "user_id": str(p.user_id),
+                "is_muted": p.is_muted,
+                "last_read_message_id": str(p.last_read_message_id) if p.last_read_message_id else None,
+                "joined_at": p.joined_at.isoformat(),
+                "user": user_data,
+            })
+        
+        # Create response - use model_validate with a dict to avoid attribute access issues
+        response_data = {
+            "id": str(conversation.id),
+            "trip_id": str(conversation.trip_id),
+            "created_at": conversation.created_at.isoformat(),
+            "updated_at": conversation.updated_at.isoformat(),
+            "last_message_at": conversation.last_message_at.isoformat() if conversation.last_message_at else None,
+            "participants": participants,
+            "trip": trip_info,
+        }
+        logger.info(f"get_conversation: building response with trip={trip_info}, participants count={len(participants)}")
+        
+        return ConversationCreateResponse(**response_data)
     except ChatNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

@@ -77,9 +77,19 @@ export default function ChatPage() {
   }
 
   const otherParticipant = conversation?.participants?.find((p) => p.user_id !== userId);
+  
+  // First try to show trip name if available
+  const tripName = conversation?.trip?.from_city && conversation?.trip?.to_city
+    ? `${conversation.trip.from_city} → ${conversation.trip.to_city}`
+    : null;
+  
+  // Then try other participant's name
   const otherName = otherParticipant?.user?.first_name && otherParticipant?.user?.last_name
     ? `${otherParticipant.user.first_name} ${otherParticipant.user.last_name}`
-    : 'Chat';
+    : null;
+  
+  // Fallback to trip name or participant name or generic
+  const displayName = tripName || otherName || 'Chat';
 
   return (
     <div className={styles.container}>
@@ -89,19 +99,27 @@ export default function ChatPage() {
             {otherParticipant?.user?.avatar_url ? (
               <img 
                 src={otherParticipant.user.avatar_url} 
-                alt={otherName}
+                alt={displayName}
               />
             ) : (
               <div className={styles.avatarPlaceholder}>
-                {otherName.charAt(0).toUpperCase()}
+                {(displayName || 'C').charAt(0).toUpperCase()}
               </div>
             )}
           </div>
           <div className={styles.headerInfo}>
-            <div className={styles.headerName}>{otherName}</div>
+            <div className={styles.headerName}>{displayName}</div>
             {conversation?.trip && (
               <div className={styles.headerTrip}>
                 {conversation.trip.from_city} → {conversation.trip.to_city}
+                {conversation.trip.departure_date && (
+                  <span className={styles.headerDate}>
+                    {new Date(conversation.trip.departure_date).toLocaleDateString('ru-RU', {
+                      day: 'numeric',
+                      month: 'short',
+                    })}
+                  </span>
+                )}
               </div>
             )}
           </div>
@@ -140,9 +158,8 @@ export default function ChatPage() {
         <Button 
           onClick={handleSend}
           disabled={!messageText.trim() || sendMutation.isPending}
-          loading={sendMutation.isPending}
         >
-          {t('chat.send')}
+          {sendMutation.isPending ? '...' : t('chat.send')}
         </Button>
       </div>
     </div>

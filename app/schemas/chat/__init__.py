@@ -16,6 +16,7 @@ Pydantic схемы для чатов (Chat).
 - WebSocketConnection — подключение для WebSocket
 """
 from app.schemas.chat.schemas import (
+    ConversationByTripCreate,
     ConversationCreate,
     ConversationCreateResponse,
     ConversationList,
@@ -27,12 +28,14 @@ from app.schemas.chat.schemas import (
     MessageList,
     MessageRead,
     MessageReadUpdate,
+    TripBrief,
     UserBrief,
     WebSocketConnection,
     WebSocketMessage,
 )
 
 __all__ = [
+    "ConversationByTripCreate",
     "ConversationCreate",
     "ConversationCreateResponse",
     "ConversationList",
@@ -44,6 +47,7 @@ __all__ = [
     "MessageList",
     "MessageRead",
     "MessageReadUpdate",
+    "TripBrief",
     "UserBrief",
     "WebSocketConnection",
     "WebSocketMessage",

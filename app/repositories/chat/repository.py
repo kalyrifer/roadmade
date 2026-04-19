@@ -54,7 +54,10 @@ class ChatRepository:
                 selectinload(Conversation.participants).selectinload(
                     ConversationParticipant.user
                 ),
-                selectinload(Conversation.messages),
+                selectinload(Conversation.messages).selectinload(
+                    Message.sender
+                ),
+                selectinload(Conversation.trip),
             )
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
@@ -72,6 +75,7 @@ class ChatRepository:
                     ConversationParticipant.user
                 ),
                 selectinload(Conversation.messages),
+                selectinload(Conversation.trip),
             )
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
@@ -159,6 +163,11 @@ class ChatRepository:
         user_id: UUID,
     ) -> ConversationParticipant:
         """Добавление участника в чат."""
+        # Check if already exists
+        existing = await self.get_participant(conversation_id, user_id)
+        if existing:
+            return existing
+        
         participant = ConversationParticipant(
             conversation_id=conversation_id,
             user_id=user_id,
@@ -304,8 +313,10 @@ class ChatRepository:
         query = (
             select(Message)
             .where(Message.conversation_id == conversation_id)
-            .options(selectinload(Message.sender))
-            .order_by(Message.created_at.desc())
+            .options(
+                selectinload(Message.sender),
+            )
+            .order_by(Message.created_at.asc())
             .limit(limit)
             .offset(offset)
         )
