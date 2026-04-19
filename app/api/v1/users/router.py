@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-from app.core.dependencies import CurrentUser, get_current_user
+from app.core.dependencies import CurrentUser, CurrentUserOptional, get_current_user
 from app.models.users.model import User, UserRole
 from app.schemas.users.schemas import UserResponse, UserUpdateRequest
 from app.services.users.service import UserService
@@ -102,45 +102,20 @@ async def update_my_profile(
     )
 
 
-@router.get("/{user_id}", response_model=UserResponse)
-async def get_user_profile(
+@router.get("/public/{user_id}", response_model=UserResponse)
+async def get_user_profile_public(
     user_id: str,
     user_service: UserServiceDep,
-    current_user: CurrentUser,
 ) -> UserResponse:
     """
-    Просмотр профиля пользователя.
-    
-    Права доступа:
-    - Пользователь может смотреть свой профиль
-    - Админ может смотреть любой профиль
-    
-    Args:
-        user_id: ID пользователя (UUID строка)
-        current_user: Текущий авторизованный пользователь
-        user_service: Сервис пользователей
-        
-    Returns:
-        UserResponse: Данные профиля пользователя
-        
-    Raises:
-        HTTPException: 403 если нет прав
-        HTTPException: 404 если пользователь не найден
+    Просмотр профиля пользователя (публичный).
     """
-    # Валидация UUID
     try:
         target_uuid = uuid.UUID(user_id)
     except ValueError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid user ID format",
-        )
-    
-    # Проверка прав доступа
-    if not user_service.check_can_view_profile(current_user, target_uuid):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to view this profile",
         )
     
     return await user_service.get_user_profile(target_uuid)

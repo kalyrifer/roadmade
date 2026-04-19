@@ -36,16 +36,21 @@ export const tripsApi = {
 
   getById: async (id: string): Promise<Trip> => {
     const response = await api.get<any>(`/trips/${id}`);
-    // Backend may return either { trip, driver, reviews } or just trip data
     const data = response.data;
-    // Check if it's wrapped format or flat format
     if (data.trip && data.driver) {
-      return {
+      const trip = {
         ...data.trip,
         driver: data.driver,
       };
+      // Fetch passengers separately
+      try {
+        const passengersResponse = await api.get<any[]>(`/trips/${id}/passengers`);
+        trip.passengers = passengersResponse.data;
+      } catch {
+        trip.passengers = [];
+      }
+      return trip;
     }
-    // It's flat format - return as is, driver will be fetched separately or use driver_id
     return data;
   },
 

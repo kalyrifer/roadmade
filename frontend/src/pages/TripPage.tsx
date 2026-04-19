@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, Card, Input, Modal, Skeleton } from '../components/ui';
 import { tripsApi } from '../services/api/trips';
 import { chatApi } from '../services/api/chat';
-import { reviewsApi } from '../services/api';
+import { reviewsApi, usersApi } from '../services/api';
 import { useAuthStore } from '../stores/auth';
 import styles from './TripPage.module.css';
 
@@ -24,6 +24,7 @@ export default function TripPage() {
 
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedPassengerId, setSelectedPassengerId] = useState<string | null>(null);
   const [seatsRequested, setSeatsRequested] = useState<number>(1);
   const [message, setMessage] = useState<string>('');
   const [bookingError, setBookingError] = useState<string | null>(null);
@@ -62,6 +63,21 @@ export default function TripPage() {
       }
     },
     enabled: !!trip?.driver_id,
+  });
+
+  const { data: passengerProfile } = useQuery({
+    queryKey: ['userProfile', selectedPassengerId],
+    queryFn: async () => {
+      if (!selectedPassengerId) return null;
+      try {
+        const result = await usersApi.getById(selectedPassengerId);
+        return result;
+      } catch (err) {
+        console.error('Error loading passenger profile:', err);
+        return null;
+      }
+    },
+    enabled: !!selectedPassengerId,
   });
 
   const formatDate = (dateString: string) => {
@@ -265,6 +281,35 @@ export default function TripPage() {
           </div>
         )}
 
+        {/* Пассажиры */}
+        {trip.passengers && trip.passengers.length > 0 && (
+          <div className={styles.passengers}>
+            <h3>Пассажиры</h3>
+            <div className={styles.passengersList}>
+              {trip.passengers.map((passenger: any) => (
+                <div 
+                  key={passenger.id} 
+                  className={styles.passengerItem}
+                  onClick={() => setSelectedPassengerId(passenger.id)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  {passenger.avatar_url ? (
+                    <img src={passenger.avatar_url} alt="" className={styles.passengerAvatar} />
+                  ) : (
+                    <div className={styles.passengerAvatarPlaceholder}>
+                      {passenger.name?.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div className={styles.passengerInfo}>
+                    <div className={styles.passengerName}>{passenger.name}</div>
+                    <div className={styles.passengerSeats}>Мест: {passenger.seats_requested}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className={styles.details}>
           <div className={styles.detailItem}>
             <span className={styles.detailLabel}>{t('trips.availableSeats')}</span>
@@ -459,6 +504,62 @@ export default function TripPage() {
             </Button>
           </div>
         </div>
+      </Modal>
+
+      {/* Модальное окно профиля пассажира */}
+      <Modal
+        isOpen={!!selectedPassengerId}
+        onClose={() => setSelectedPassengerId(null)}
+        title="Профиль пассажира"
+      >
+        {passengerProfile ? (
+          <div className={styles.passengerProfileModal}>
+            <div className={styles.profileHeader}>
+              {passengerProfile.avatar_url ? (
+                <img src={passengerProfile.avatar_url} alt="" className={styles.profileAvatar} />
+              ) : (
+                <div className={styles.profileAvatarPlaceholder}>
+                  {passengerProfile.name?.charAt(0).toUpperCase() || '?'}
+                </div>
+              )}
+              <div className={styles.profileInfo}>
+                <h3 className={styles.profileName}>{passengerProfile.name}</h3>
+                {passengerProfile.rating_average !== undefined && (
+                  <div className={styles.profileRating}>
+                    ★ {passengerProfile.rating_average.toFixed(1)} ({passengerProfile.rating_count || 0} отзывов)
+                  </div>
+                )}
+              </div>
+            </div>
+            {passengerProfile.phone && (
+              <div className={styles.profileField}>
+                <span className={styles.profileLabel}>Телефон:</span>
+                <span className={styles.profileValue}>{passengerProfile.phone}</span>
+              </div>
+            )}
+            {passengerProfile.bio && (
+              <div className={styles.profileField}>
+                <span className={styles.profileLabel}>О себе:</span>
+                <span className={styles.profileValue}>{passengerProfile.bio}</span>
+              </div>
+            )}
+            <div className={styles.profileActions}>
+              <Button 
+                variant="primary" 
+                onClick={() => {
+                  chatApi.createOrGetConversation(selectedPassengerId!, '').then((conv) => {
+                    navigate(`/chat/${conv.id}`);
+                    setSelectedPassengerId(null);
+                  });
+                }}
+              >
+                Написать сообщение
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div>Загрузка...</div>
+        )}
       </Modal>
     </div>
   );

@@ -175,7 +175,7 @@ export const usersApi = {
   
   // Получить профиль пользователя по ID
   getById: async (id: string) => {
-    const response = await axiosInstance.get<UserProfile>(`/users/${id}`);
+    const response = await axiosInstance.get<UserProfile>(`/users/public/${id}`);
     return response.data;
   },
   

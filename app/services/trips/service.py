@@ -29,14 +29,16 @@ class TripService:
     Обеспечивает бизнес-логику для работы с поездками.
     """
     
-    def __init__(self, trip_repository: TripRepository):
+    def __init__(self, trip_repository: TripRepository, db=None):
         """
         Инициализация сервиса.
         
         Args:
             trip_repository: Repository для работы с поездками
+            db: Опциональная сессия БД для дополнительных запросов
         """
         self.trip_repo = trip_repository
+        self._db = db
     
     async def create_trip(
         self,
@@ -177,6 +179,7 @@ class TripService:
         Включает:
         - Основные данные поездки
         - Информацию о водителе (имя, рейтинг)
+        - Список подтверждённых пассажиров
         - Отзывы о водителе и поездке
         
         Args:
@@ -188,6 +191,9 @@ class TripService:
         Raises:
             HTTPException: 404 если поездка не найдена
         """
+        from app.models.requests.model import TripRequestStatus
+        from app.repositories.requests.repository import TripRequestRepository
+        
         trip = await self.trip_repo.get_by_id_with_driver(trip_id)
         
         if not trip:
@@ -216,16 +222,56 @@ class TripService:
                 "avatar_url": trip.driver.avatar_url,
             }
         
-        # Формируем результат
+        # Формируем результат (без пассажиров - они загружаются отдельно)
         result = {
             "trip": trip_data,
             "driver": driver_info,
-            # Отзывы о поездке (можно добавить позже)
             "reviews": [],
         }
         
         return result
     
+    async def get_trip_passengers(self, trip_id: uuid.UUID) -> list[dict[str, Any]]:
+        """
+        Получение списка пассажиров поездки (все статусы).
+        
+        Args:
+            trip_id: ID поездки
+            
+        Returns:
+            list: Список пассажиров с их данными
+        """
+        from app.repositories.requests.repository import TripRequestRepository
+        from app.models.requests.model import TripRequestStatus
+        
+        passengers_info = []
+        
+        if self._db:
+            request_repo = TripRequestRepository(self._db)
+            # Получаем все заявки (включая pending)
+            requests_list, _ = await request_repo.list_by_trip(
+                trip_id,
+                limit=50
+            )
+            
+            for req in requests_list:
+                passenger = req.passenger
+                if passenger:
+                    passenger_name = None
+                    if passenger.first_name or passenger.last_name:
+                        passenger_name = f"{passenger.first_name or ''} {passenger.last_name or ''}".strip()
+                    if not passenger_name:
+                        passenger_name = passenger.email.split("@")[0]
+                    passengers_info.append({
+                        "id": str(passenger.id),
+                        "name": passenger_name,
+                        "seats_requested": req.seats_requested,
+                        "avatar_url": passenger.avatar_url,
+                        "rating_average": float(passenger.rating_average) if passenger.rating_average else None,
+                    })
+        
+        return passengers_info
+
     async def get_driver_trips(
         self,
         current_user: User,

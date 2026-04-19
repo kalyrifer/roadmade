@@ -81,6 +81,15 @@ export interface Trip {
   status: TripStatus;
   created_at: string;
   updated_at?: string;
+  passengers?: Passenger[];
+}
+
+export interface Passenger {
+  id: string;
+  name: string;
+  seats_requested: number;
+  avatar_url?: string;
+  rating_average?: number;
 }
 
 export interface TripFormData {

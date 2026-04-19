@@ -49,18 +49,20 @@ async def get_trip_repository(
 
 
 async def get_trip_service(
-    trip_repository: TripRepository = Depends(get_trip_repository)
+    trip_repository: TripRepository = Depends(get_trip_repository),
+    db: AsyncSession = Depends(get_db)
 ) -> TripService:
     """
     Получение сервиса для работы с поездками.
     
     Args:
         trip_repository: Repository для работы с поездками
+        db: Сессия БД
         
     Returns:
         TripService: Экземпляр сервиса
     """
-    return TripService(trip_repository)
+    return TripService(trip_repository, db)
 
 
 # Типы для зависимостей
@@ -350,3 +352,56 @@ async def publish_trip(
         current_user=current_user,
         trip_id=trip_uuid
     )
+
+
+@router.get("/{trip_id}/passengers")
+async def get_trip_passengers(
+    trip_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Получение списка пассажиров поездки.
+    """
+    from app.models.requests.model import TripRequest, TripRequestStatus
+    from sqlalchemy import select
+    from sqlalchemy.orm import joinedload
+    
+    try:
+        trip_uuid = uuid.UUID(trip_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid trip ID format"
+        )
+    
+    # Get requests with passenger data
+    result = await db.execute(
+        select(TripRequest)
+        .options(joinedload(TripRequest.passenger))
+        .where(
+            TripRequest.trip_id == trip_uuid,
+            TripRequest.status == TripRequestStatus.CONFIRMED,
+            TripRequest.deleted_at.is_(None)
+        )
+        .limit(50)
+    )
+    requests_list = result.scalars().all()
+    
+    passengers = []
+    for req in requests_list:
+        passenger = req.passenger
+        if passenger:
+            name = None
+            if passenger.first_name or passenger.last_name:
+                name = f"{passenger.first_name or ''} {passenger.last_name or ''}".strip()
+            if not name:
+                name = passenger.email.split("@")[0]
+            passengers.append({
+                "id": str(passenger.id),
+                "name": name,
+                "seats_requested": req.seats_requested,
+                "avatar_url": passenger.avatar_url,
+                "rating_average": float(passenger.rating_average) if passenger.rating_average else None,
+            })
+    
+    return passengers

@@ -334,3 +334,139 @@
   color: var(--gray-700);
   margin: 0;
 }
+
+.passengers {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--gray-200);
+}
+
+.passengers h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0 0 16px 0;
+  color: var(--gray-900);
+}
+
+.passengersList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.passengerItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--gray-100);
+  border-radius: var(--radius);
+}
+
+.passengerAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.passengerAvatarPlaceholder {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.passengerInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.passengerName {
+  font-weight: 600;
+  color: var(--gray-900);
+}
+
+.passengerSeats {
+  font-size: 0.875rem;
+  color: var(--gray-600);
+}
+
+.passengerProfileModal {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 320px;
+}
+
+.profileHeader {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.profileAvatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.profileAvatarPlaceholder {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 2rem;
+}
+
+.profileInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.profileName {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--gray-900);
+}
+
+.profileRating {
+  font-size: 1rem;
+  color: var(--warning);
+  font-weight: 600;
+}
+
+.profileField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.profileLabel {
+  font-size: 0.875rem;
+  color: var(--gray-600);
+}
+
+.profileValue {
+  font-size: 1rem;
+  color: var(--gray-900);
+}
+
+.profileActions {
+  margin-top: 8px;
+}
