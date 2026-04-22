@@ -33,11 +33,8 @@ interface ConversationWithOther {
       avatar_url?: string;
     };
   }>;
-  otherUser: {
-    id: string;
-    name: string;
-    avatar_url?: string;
-  };
+  chatTitle: string;
+  participantCount: number;
 }
 
 export default function ChatListPage() {
@@ -58,28 +55,34 @@ export default function ChatListPage() {
     if (!conversationsData?.items || !userId) return [];
     
     return conversationsData.items.map((conv) => {
-      const otherParticipant = conv.participants?.find((p) => p.user_id !== userId);
-      const otherUser = otherParticipant?.user;
+      const participants = conv.participants || [];
+      const participantCount = participants.length;
       
-      // First try other participant's name
-      const otherFirstName = otherUser?.first_name || '';
-      const otherLastName = otherUser?.last_name || '';
-      const otherName = otherFirstName || otherLastName
-        ? `${otherFirstName} ${otherLastName}`.trim()
-        : null;
+      // Build list of participant names (excluding current user)
+      const otherParticipants = participants.filter(p => p.user_id !== userId);
+      let chatTitle = '';
       
-      // Then try trip name if available
-      const tripName = conv.trip?.from_city && conv.trip?.to_city
-        ? `${conv.trip.from_city} → ${conv.trip.to_city}`
-        : null;
-
+      if (conv.trip?.from_city && conv.trip?.to_city) {
+        // Use trip route as base
+        chatTitle = `${conv.trip.from_city} → ${conv.trip.to_city}`;
+        
+        // Add participant count if more than 1
+        if (participantCount > 2) {
+          chatTitle = `${chatTitle} (${participantCount} участников)`;
+        } else if (participantCount === 2) {
+          // For 1:1 chats, show other person's name
+          const other = otherParticipants[0]?.user;
+          if (other?.first_name || other?.last_name) {
+            const name = `${other.first_name || ''} ${other.last_name || ''}`.trim();
+            chatTitle = name;
+          }
+        }
+      }
+      
       return {
         ...conv,
-        otherUser: {
-          id: (otherUser?.id || otherParticipant?.user_id) || '',
-          name: otherName || tripName || 'Unknown',
-          avatar_url: otherUser?.avatar_url,
-        },
+        chatTitle: chatTitle || 'Chat',
+        participantCount,
       };
     });
   }, [conversationsData, userId]);
@@ -153,35 +156,31 @@ export default function ChatListPage() {
               onClick={() => navigate(`/chat/${conv.id}`)}
             >
               <div className={styles.avatar}>
-                {conv.otherUser.avatar_url ? (
-                  <img 
-                    src={conv.otherUser.avatar_url} 
-                    alt={conv.otherUser.name}
-                    className={styles.avatarImg}
-                  />
-                ) : (
-                  <div className={styles.avatarPlaceholder}>
-                    {conv.otherUser.name.charAt(0).toUpperCase()}
-                  </div>
-                )}
+                <div className={styles.avatarPlaceholder}>
+                  {conv.chatTitle.charAt(0).toUpperCase()}
+                </div>
               </div>
               
               <div className={styles.content}>
                 <div className={styles.topRow}>
-                  <span className={styles.name}>{conv.otherUser.name}</span>
+                  <span className={styles.name}>{conv.chatTitle}</span>
                   <span className={styles.time}>
                     {formatTime(conv.last_message?.created_at || conv.last_message_at)}
                   </span>
                 </div>
                 
                 <div className={styles.trip}>
-                  {conv.trip?.from_city} → {conv.trip?.to_city}
                   {conv.trip?.departure_date && (
                     <span className={styles.date}>
                       {new Date(conv.trip.departure_date).toLocaleDateString('ru-RU', {
                         day: 'numeric',
                         month: 'short',
                       })}
+                    </span>
+                  )}
+                  {conv.participantCount > 0 && (
+                    <span className={styles.date}>
+                      {' · '}{conv.participantCount} участников
                     </span>
                   )}
                 </div>

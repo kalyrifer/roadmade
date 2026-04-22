@@ -66,6 +66,17 @@ export default function ChatPage() {
     });
   };
 
+  const getSenderName = (senderId: string) => {
+    const participant = conversation?.participants?.find(p => p.user_id === senderId);
+    const user = participant?.user;
+    if (user?.first_name || user?.last_name) {
+      return `${user.first_name || ''} ${user.last_name || ''}`.trim();
+    }
+    return 'Участник';
+  };
+
+  const participantCount = conversation?.participants?.length || 0;
+
   if (convLoading || msgsLoading) {
     return (
       <div className={styles.container}>
@@ -76,38 +87,36 @@ export default function ChatPage() {
     );
   }
 
-  const otherParticipant = conversation?.participants?.find((p) => p.user_id !== userId);
-  
-  const otherFirstName = otherParticipant?.user?.first_name || '';
-  const otherLastName = otherParticipant?.user?.last_name || '';
-  const otherName = otherFirstName || otherLastName
-    ? `${otherFirstName} ${otherLastName}`.trim()
-    : null;
-  
   const tripName = conversation?.trip?.from_city && conversation?.trip?.to_city
     ? `${conversation.trip.from_city} → ${conversation.trip.to_city}`
-    : null;
+    : 'Chat';
   
-  const displayName = otherName || tripName || 'Chat';
+  const participantNames = conversation?.participants
+    ?.map(p => {
+      const user = p.user;
+      if (user?.first_name || user?.last_name) {
+        return `${user.first_name || ''} ${user.last_name || ''}`.trim();
+      }
+      return null;
+    })
+    .filter(Boolean)
+    .join(', ') || '';
+  
+  const chatTitle = participantCount > 2 
+    ? `${tripName} (${participantCount})`
+    : tripName;
 
   return (
     <div className={styles.container}>
       <div className={styles.header}>
         <div className={styles.headerContent}>
           <div className={styles.avatar}>
-            {otherParticipant?.user?.avatar_url ? (
-              <img 
-                src={otherParticipant.user.avatar_url} 
-                alt={displayName}
-              />
-            ) : (
-              <div className={styles.avatarPlaceholder}>
-                {(displayName || 'C').charAt(0).toUpperCase()}
-              </div>
-            )}
+            <div className={styles.avatarPlaceholder}>
+              {chatTitle.charAt(0).toUpperCase()}
+            </div>
           </div>
           <div className={styles.headerInfo}>
-            <div className={styles.headerName}>{displayName}</div>
+            <div className={styles.headerName}>{chatTitle}</div>
             {conversation?.trip && (
               <div className={styles.headerTrip}>
                 {conversation.trip.from_city} → {conversation.trip.to_city}
@@ -119,6 +128,16 @@ export default function ChatPage() {
                     })}
                   </span>
                 )}
+                {participantCount > 0 && (
+                  <span className={styles.headerDate}>
+                    {' · '}{participantCount} участников
+                  </span>
+                )}
+              </div>
+            )}
+            {!conversation?.trip && participantCount > 0 && (
+              <div className={styles.headerTrip}>
+                {participantNames}
               </div>
             )}
           </div>
@@ -133,6 +152,11 @@ export default function ChatPage() {
               key={msg.id} 
               className={`${styles.message} ${isOwn ? styles.own : styles.other}`}
             >
+              {!isOwn && (
+                <div className={styles.messageSender}>
+                  {getSenderName(msg.sender_id)}
+                </div>
+              )}
               <div className={styles.messageContent}>
                 {msg.content}
               </div>
