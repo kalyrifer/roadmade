@@ -1,0 +1,52 @@
+.container {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.container.sm {
+  --star-size: 16px;
+}
+
+.container.md {
+  --star-size: 20px;
+}
+
+.container.lg {
+  --star-size: 28px;
+}
+
+.star {
+  padding: 0;
+  border: none;
+  background: none;
+  color: #d1d5db;
+  cursor: default;
+  width: var(--star-size);
+  height: var(--star-size);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.star.interactive {
+  cursor: pointer;
+}
+
+.star.interactive:hover,
+.star.interactive:hover ~ .star {
+  color: #f59e0b;
+}
+
+.star.filled {
+  color: #f59e0b;
+}
+
+.star.partial {
+  color: #f59e0b;
+}
+
+.starIcon {
+  width: 100%;
+  height: 100%;
+}

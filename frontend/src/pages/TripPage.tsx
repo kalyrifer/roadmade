@@ -665,18 +665,7 @@ export default function TripPage() {
               </div>
             )}
             <div className={styles.profileActions}>
-              <Button 
-                variant="secondary"
-                onClick={() => {
-                  chatApi.createOrGetConversation(selectedDriverId!, '').then((conv) => {
-                    navigate(`/chat/${conv.id}`);
-                    setSelectedDriverId(null);
-                  });
-                }}
-              >
-                Написать сообщение
-              </Button>
-              {trip?.status === 'completed' && isAuthenticated && !isOwner && canReviewData?.can_review && (
+{trip?.status === 'completed' && isAuthenticated && !isOwner && canReviewData?.can_review && (
                 <Button 
                   variant="primary" 
                   onClick={() => {
