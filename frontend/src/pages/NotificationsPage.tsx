@@ -32,6 +32,7 @@ export default function NotificationsPage() {
     mutationFn: (notificationId: string) => notificationsApi.markAsRead(notificationId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['unreadCount'] });
     },
   });
 
@@ -39,6 +40,7 @@ export default function NotificationsPage() {
     mutationFn: () => notificationsApi.markAllAsRead(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['unreadCount'] });
     },
   });
 
@@ -144,9 +146,13 @@ export default function NotificationsPage() {
     }
   };
 
-  const handleNotificationClick = (notification: Notification) => {
+  const handleNotificationClick = async (notification: Notification) => {
     if (!notification.is_read) {
-      markAsReadMutation.mutate(notification.id);
+      try {
+        await markAsReadMutation.mutateAsync(notification.id);
+      } catch (error) {
+        console.error('Failed to mark notification as read:', error);
+      }
     }
 
     // Для уведомлений о заявках показываем модальное окно с деталями

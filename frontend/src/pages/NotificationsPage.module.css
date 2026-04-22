@@ -32,6 +32,8 @@
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
+  border-left: 3px solid #22c55e;
+  background-color: var(--read-bg, #f0fdf4);
 }
 
 .notificationCard:hover {
@@ -40,8 +42,8 @@
 }
 
 .notificationCard.unread {
-  background-color: var(--unread-bg, #f0f7ff);
-  border-left: 3px solid var(--primary-color, #FF6B35);
+  background-color: var(--unread-bg, #fef2f2);
+  border-left-color: #ef4444;
 }
 
 .notificationIcon {

@@ -2,7 +2,10 @@ import { ReactNode, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { clsx } from 'clsx';
+import { useQuery } from '@tanstack/react-query';
 import styles from './Layout.module.css';
+import { notificationsApi } from '../services/api/notifications';
+import { useAuthStore } from '../stores/auth';
 
 interface LayoutProps {
   children: ReactNode;
@@ -12,8 +15,17 @@ export function Layout({ children }: LayoutProps) {
   const { t } = useTranslation();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { isAuthenticated } = useAuthStore();
 
   const isActive = (path: string) => location.pathname === path;
+
+  // Fetch unread notifications count
+  const { data: unreadCountData } = useQuery({
+    queryKey: ['unreadCount'],
+    queryFn: () => notificationsApi.getUnreadCount(),
+    enabled: isAuthenticated,
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
 
   return (
     <div className={styles.layout}>
@@ -63,6 +75,11 @@ export function Layout({ children }: LayoutProps) {
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
                 <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
               </svg>
+              {isAuthenticated && unreadCountData && unreadCountData.unread_count > 0 && (
+                <span className={styles.notificationBadge}>
+                  {unreadCountData.unread_count > 99 ? '99+' : unreadCountData.unread_count}
+                </span>
+              )}
             </Link>
             <Link to="/profile" className={styles.avatar} title={t('nav.profile')}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -125,6 +142,11 @@ export function Layout({ children }: LayoutProps) {
               onClick={() => setMobileMenuOpen(false)}
             >
               {t('nav.notifications')}
+              {isAuthenticated && unreadCountData && unreadCountData.unread_count > 0 && (
+                <span className={styles.notificationBadge} style={{ position: 'relative', top: 'auto', right: 'auto', marginLeft: '8px' }}>
+                  {unreadCountData.unread_count > 99 ? '99+' : unreadCountData.unread_count}
+                </span>
+              )}
             </Link>
             <Link 
               to="/profile" 
