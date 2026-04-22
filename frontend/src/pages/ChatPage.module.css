@@ -62,14 +62,6 @@
 .headerTrip {
   font-size: 13px;
   color: #666;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.headerTrip::before {
-  content: '🚗';
-  font-size: 12px;
 }
 
 .headerDate {
@@ -247,4 +239,26 @@
 .sendButton:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.tripInfo {
+  padding: 12px 20px;
+  background: white;
+  border-top: 1px solid #e8e8e8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.tripRoute {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+.tripDate {
+  font-size: 13px;
+  color: #4a90d9;
+  font-weight: 500;
 }

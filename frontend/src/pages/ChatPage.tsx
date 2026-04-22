@@ -117,29 +117,9 @@ export default function ChatPage() {
           </div>
           <div className={styles.headerInfo}>
             <div className={styles.headerName}>{chatTitle}</div>
-            {conversation?.trip && (
-              <div className={styles.headerTrip}>
-                {conversation.trip.from_city} → {conversation.trip.to_city}
-                {conversation.trip.departure_date && (
-                  <span className={styles.headerDate}>
-                    {new Date(conversation.trip.departure_date).toLocaleDateString('ru-RU', {
-                      day: 'numeric',
-                      month: 'short',
-                    })}
-                  </span>
-                )}
-                {participantCount > 0 && (
-                  <span className={styles.headerDate}>
-                    {' · '}{participantCount} участников
-                  </span>
-                )}
-              </div>
-            )}
-            {!conversation?.trip && participantCount > 0 && (
-              <div className={styles.headerTrip}>
-                {participantNames}
-              </div>
-            )}
+            <div className={styles.headerTrip}>
+              {participantNames}
+            </div>
           </div>
         </div>
       </div>
@@ -168,6 +148,22 @@ export default function ChatPage() {
         })}
         <div ref={messagesEndRef} />
       </div>
+
+      {conversation?.trip && (
+        <div className={styles.tripInfo}>
+          <div className={styles.tripRoute}>
+            {conversation.trip.from_city} → {conversation.trip.to_city}
+          </div>
+          {conversation.trip.departure_date && (
+            <div className={styles.tripDate}>
+              {new Date(conversation.trip.departure_date).toLocaleDateString('ru-RU', {
+                day: 'numeric',
+                month: 'short',
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className={styles.inputArea}>
         <textarea
