@@ -35,6 +35,7 @@ interface ConversationWithOther {
   }>;
   chatTitle: string;
   participantCount: number;
+  tripInfo: string;
 }
 
 export default function ChatListPage() {
@@ -61,21 +62,25 @@ export default function ChatListPage() {
       // Build list of participant names (excluding current user)
       const otherParticipants = participants.filter(p => p.user_id !== userId);
       let chatTitle = '';
+      let tripInfo = '';
       
       if (conv.trip?.from_city && conv.trip?.to_city) {
-        // Use trip route as base
-        chatTitle = `${conv.trip.from_city} → ${conv.trip.to_city}`;
+        tripInfo = `${conv.trip.from_city} → ${conv.trip.to_city}`;
         
-        // Add participant count if more than 1
+        // For group chats (3+ participants) - show trip route
         if (participantCount > 2) {
-          chatTitle = `${chatTitle} (${participantCount} участников)`;
+          chatTitle = tripInfo;
         } else if (participantCount === 2) {
-          // For 1:1 chats, show other person's name
+          // For 1:1 chats, show other person's name + trip
           const other = otherParticipants[0]?.user;
           if (other?.first_name || other?.last_name) {
             const name = `${other.first_name || ''} ${other.last_name || ''}`.trim();
-            chatTitle = name;
+            chatTitle = `${name} · ${tripInfo}`;
+          } else {
+            chatTitle = tripInfo;
           }
+        } else {
+          chatTitle = tripInfo;
         }
       }
       
@@ -83,6 +88,7 @@ export default function ChatListPage() {
         ...conv,
         chatTitle: chatTitle || 'Chat',
         participantCount,
+        tripInfo,
       };
     });
   }, [conversationsData, userId]);
