@@ -7,6 +7,7 @@ import uuid
 from typing import Any
 
 from fastapi import HTTPException, status
+from sqlalchemy import func
 
 from app.models.trips.model import TripStatus
 from app.models.users.model import User, UserRole
@@ -346,6 +347,55 @@ class TripService:
         )
         
         # Формируем ответ
+        return PaginatedTrips(
+            total=total,
+            page=page,
+            limit=limit,
+            items=[TripResponse.from_orm(trip) for trip in trips]
+        )
+    
+    async def get_passenger_trips(
+        self,
+        current_user: User,
+        status_filter: str | None = None,
+        page: int = 1,
+        limit: int = 10,
+    ) -> PaginatedTrips:
+        """
+        Получение списка поездок, где пользователь - пассажир.
+        
+        Args:
+            current_user: Текущий пользователь
+            status_filter: Фильтр по статусу (optional)
+            page: Номер страницы
+            limit: Количество элементов на странице
+            
+        Returns:
+            PaginatedTrips: Список поездок с пагинацией
+        """
+        if page < 1:
+            page = 1
+        if limit < 1:
+            limit = 10
+        if limit > 100:
+            limit = 100
+        
+        # Валидация статуса
+        trip_status = None
+        if status_filter:
+            try:
+                trip_status = TripStatus(status_filter)
+            except ValueError:
+                pass
+        
+        offset = (page - 1) * limit
+        trips, total = await self.trip_repo.get_trips_by_passenger(
+            passenger_id=current_user.id,
+            status=trip_status,
+            offset=offset,
+            limit=limit,
+        )
+        
         return PaginatedTrips(
             total=total,
             page=page,

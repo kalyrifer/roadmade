@@ -105,6 +105,18 @@ export const tripsApi = {
     }
   },
 
+  getMyPassengerTrips: async (status?: string): Promise<Trip[]> => {
+    try {
+      const response = await api.get<{ items: Trip[] }>('/trips/my/passenger', {
+        params: status ? { status, limit: 100 } : { limit: 100 },
+      });
+      return response.data.items;
+    } catch (error) {
+      console.error('Error fetching passenger trips:', error);
+      return [];
+    }
+  },
+
   getUserTrips: async (userId: string): Promise<Trip[]> => {
     const response = await api.get<PaginatedResponse<Trip>>(`/users/${userId}/trips`);
     return response.data.items;

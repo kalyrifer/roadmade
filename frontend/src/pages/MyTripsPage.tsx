@@ -7,15 +7,28 @@ import { tripsApi } from '../services/api/trips';
 import type { Trip } from '../types';
 import styles from './MyTripsPage.module.css';
 
+type TabType = 'driver' | 'passenger';
+
 export default function MyTripsPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<TabType>('driver');
   const [statusFilter, setStatusFilter] = useState<string>('');
 
-  const { data: trips, isLoading, error } = useQuery({
-    queryKey: ['myTrips', statusFilter],
+  const { data: driverTrips, isLoading: isDriverLoading } = useQuery({
+    queryKey: ['myTrips', 'driver', statusFilter],
     queryFn: () => tripsApi.getMyTrips(statusFilter || undefined),
+    enabled: activeTab === 'driver',
   });
+
+  const { data: passengerTrips, isLoading: isPassengerLoading } = useQuery({
+    queryKey: ['myTrips', 'passenger', statusFilter],
+    queryFn: () => tripsApi.getMyPassengerTrips(statusFilter || undefined),
+    enabled: activeTab === 'passenger',
+  });
+
+  const trips = activeTab === 'driver' ? driverTrips : passengerTrips;
+  const isLoading = activeTab === 'driver' ? isDriverLoading : isPassengerLoading;
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -47,15 +60,71 @@ export default function MyTripsPage() {
     return <span className={`${styles.statusBadge} ${statusInfo.className}`}>{statusInfo.label}</span>;
   };
 
+  const renderTripCard = (trip: Trip) => (
+    <Card 
+      key={trip.id} 
+      className={styles.tripCard}
+      onClick={() => navigate(`/trips/${trip.id}`)}
+    >
+      <div className={styles.tripHeader}>
+        <div className={styles.routeInfo}>
+          <span className={styles.cityName}>{trip.from_city}</span>
+          <span className={styles.routeArrow}>→</span>
+          <span className={styles.cityName}>{trip.to_city}</span>
+        </div>
+        {getStatusBadge(trip.status)}
+      </div>
+
+      <div className={styles.tripRoute}>
+        <div className={styles.routePoint}>
+          <div className={styles.routeTime}>{formatDate(trip.departure_date + 'T' + trip.departure_time_start)}</div>
+          <div className={styles.routeLocation}>{trip.from_address || trip.from_city}</div>
+        </div>
+        <div className={styles.routeArrow}>→</div>
+        <div className={styles.routePoint}>
+          <div className={styles.routeLocation}>{trip.to_address || trip.to_city}</div>
+        </div>
+      </div>
+
+      <div className={styles.tripFooter}>
+        <div className={styles.tripInfo}>
+          <span>{trip.available_seats} {t('trips.seats')}</span>
+          <span className={styles.tripPrice}>{formatPrice(trip.price_per_seat)}</span>
+        </div>
+        <Button variant="outline" size="sm">
+          {t('trips.viewDetails')}
+        </Button>
+      </div>
+    </Card>
+  );
+
   if (isLoading) {
     return (
       <div className={styles.container}>
         <div className={styles.header}>
           <h1>{t('trips.myTrips')}</h1>
-          <Button variant="primary" onClick={() => navigate('/trips/new')}>
-            {t('trips.createTrip')}
-          </Button>
+          {activeTab === 'driver' && (
+            <Button variant="primary" onClick={() => navigate('/trips/new')}>
+              {t('trips.createTrip')}
+            </Button>
+          )}
         </div>
+        
+        <div className={styles.tabs}>
+          <button 
+            className={`${styles.tab} ${activeTab === 'driver' ? styles.tabActive : ''}`}
+            onClick={() => setActiveTab('driver')}
+          >
+            {t('trips.asDriver')}
+          </button>
+          <button 
+            className={`${styles.tab} ${activeTab === 'passenger' ? styles.tabActive : ''}`}
+            onClick={() => setActiveTab('passenger')}
+          >
+            {t('trips.asPassenger')}
+          </button>
+        </div>
+
         <div className={styles.tripsList}>
           {[1, 2, 3].map((i) => (
             <Card key={i} className={styles.tripCard}>
@@ -72,9 +141,26 @@ export default function MyTripsPage() {
     <div className={styles.container}>
       <div className={styles.header}>
         <h1>{t('trips.myTrips')}</h1>
-        <Button variant="primary" onClick={() => navigate('/trips/new')}>
-          {t('trips.createTrip')}
-        </Button>
+        {activeTab === 'driver' && (
+          <Button variant="primary" onClick={() => navigate('/trips/new')}>
+            {t('trips.createTrip')}
+          </Button>
+        )}
+      </div>
+
+      <div className={styles.tabs}>
+        <button 
+          className={`${styles.tab} ${activeTab === 'driver' ? styles.tabActive : ''}`}
+          onClick={() => setActiveTab('driver')}
+        >
+          {t('trips.asDriver')}
+        </button>
+        <button 
+          className={`${styles.tab} ${activeTab === 'passenger' ? styles.tabActive : ''}`}
+          onClick={() => setActiveTab('passenger')}
+        >
+          {t('trips.asPassenger')}
+        </button>
       </div>
 
       <div className={styles.filterSection}>
@@ -92,13 +178,16 @@ export default function MyTripsPage() {
         </select>
       </div>
 
-      {error && (
-        <div className={styles.error}>
-          {t('errors.loadTrips')}
+      {activeTab === 'passenger' && passengerTrips && passengerTrips.length === 0 && (
+        <div className={styles.emptyState}>
+          <p>{t('trips.noPassengerTrips')}</p>
+          <Button variant="primary" onClick={() => navigate('/trips')}>
+            {t('trips.findTrips')}
+          </Button>
         </div>
       )}
 
-      {trips && trips.length === 0 && (
+      {activeTab === 'driver' && driverTrips && driverTrips.length === 0 && (
         <div className={styles.emptyState}>
           <p>{t('trips.noTripsYet')}</p>
           <Button variant="primary" onClick={() => navigate('/trips/new')}>
@@ -109,43 +198,7 @@ export default function MyTripsPage() {
 
       {trips && trips.length > 0 && (
         <div className={styles.tripsList}>
-          {trips.map((trip: Trip) => (
-            <Card 
-              key={trip.id} 
-              className={styles.tripCard}
-              onClick={() => navigate(`/trips/${trip.id}`)}
-            >
-              <div className={styles.tripHeader}>
-                <div className={styles.routeInfo}>
-                  <span className={styles.cityName}>{trip.from_city}</span>
-                  <span className={styles.routeArrow}>→</span>
-                  <span className={styles.cityName}>{trip.to_city}</span>
-                </div>
-                {getStatusBadge(trip.status)}
-              </div>
-
-              <div className={styles.tripRoute}>
-                <div className={styles.routePoint}>
-                  <div className={styles.routeTime}>{formatDate(trip.departure_date + 'T' + trip.departure_time_start)}</div>
-                  <div className={styles.routeLocation}>{trip.from_address || trip.from_city}</div>
-                </div>
-                <div className={styles.routeArrow}>→</div>
-                <div className={styles.routePoint}>
-                  <div className={styles.routeLocation}>{trip.to_address || trip.to_city}</div>
-                </div>
-              </div>
-
-              <div className={styles.tripFooter}>
-                <div className={styles.tripInfo}>
-                  <span>{trip.available_seats} {t('trips.seats')}</span>
-                  <span className={styles.tripPrice}>{formatPrice(trip.price_per_seat)}</span>
-                </div>
-                <Button variant="outline" size="sm">
-                  {t('trips.viewDetails')}
-                </Button>
-              </div>
-            </Card>
-          ))}
+          {trips.map(renderTripCard)}
         </div>
       )}
     </div>

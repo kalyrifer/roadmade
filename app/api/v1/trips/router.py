@@ -179,6 +179,34 @@ async def search_trips(
     return await trip_service.search_trips(filters)
 
 
+@router.get("/my/passenger", response_model=PaginatedTrips)
+async def get_my_passenger_trips(
+    current_user: CurrentUserDep,
+    trip_service: TripServiceDep,
+    status: str | None = None,
+    page: int = 1,
+    limit: int = 10,
+) -> PaginatedTrips:
+    """
+    Получение списка поездок, где пользователь - пассажир.
+    
+    Args:
+        current_user: Текущий авторизованный пользователь
+        status: Фильтр по статусу поездки
+        page: Номер страницы
+        limit: Количество записей на странице
+        
+    Returns:
+        PaginatedTrips: Список поездок с пагинацией
+    """
+    return await trip_service.get_passenger_trips(
+        current_user=current_user,
+        status_filter=status,
+        page=page,
+        limit=limit,
+    )
+
+
 @router.get("/my/driver", response_model=PaginatedTrips)
 async def get_my_trips(
     current_user: CurrentUserDep,

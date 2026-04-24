@@ -271,6 +271,62 @@ class TripRepository:
         
         return list(trips), total
     
+    async def get_trips_by_passenger(
+        self,
+        passenger_id: uuid.UUID,
+        status: TripStatus | None = None,
+        offset: int = 0,
+        limit: int = 10,
+    ) -> tuple[list[Trip], int]:
+        """
+        Получение списка поездок пассажира с пагинацией.
+        
+        Args:
+            passenger_id: ID пассажира
+            status: Фильтр по статусу (optional)
+            offset: Смещение для пагинации
+            limit: Количество записей
+            
+        Returns:
+            tuple[list[Trip], int]: Список поездок и общее количество
+        """
+        from app.models.requests.model import TripRequest, TripRequestStatus
+        
+        # Базовый запрос - ищем поездки где пользователь подтверждён как пассажир
+        conditions = [
+            TripRequest.passenger_id == passenger_id,
+            TripRequest.status == TripRequestStatus.CONFIRMED,
+            TripRequest.deleted_at.is_(None),
+            Trip.id == TripRequest.trip_id,
+            Trip.deleted_at.is_(None)
+        ]
+        
+        if status:
+            conditions.append(Trip.status == status)
+        
+        # Подсчет общего количества
+        count_stmt = (
+            select(Trip.id)
+            .join(TripRequest, TripRequest.trip_id == Trip.id)
+            .where(*conditions)
+        )
+        count_result = await self.session.execute(count_stmt)
+        total = len(count_result.all())
+        
+        # Получение данных с пагинацией
+        stmt = (
+            select(Trip)
+            .join(TripRequest, TripRequest.trip_id == Trip.id)
+            .where(*conditions)
+            .order_by(Trip.departure_date.asc())
+            .offset(offset)
+            .limit(limit)
+        )
+        result = await self.session.execute(stmt)
+        trips = result.scalars().all()
+        
+        return list(trips), total
+    
     async def update_status(self, trip: Trip, new_status: TripStatus) -> Trip:
         """
         Обновление статуса поездки.
