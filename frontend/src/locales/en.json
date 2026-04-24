@@ -176,6 +176,8 @@
     "updateSuccessTitle": "Trip updated!",
     "updateSuccessMessage": "Your trip has been successfully updated.",
     "publish": "Publish",
+    "complete": "Complete",
+    "completedSuccess": "Trip completed successfully!",
     "cancel": "Cancel",
     "cancelTrip": "Cancel trip",
     "confirmCancelTrip": "Are you sure you want to cancel this trip?",

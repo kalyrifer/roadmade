@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, Card, Input, Modal, Skeleton } from '../components/ui';
+import { Toast, showToast } from '../components/ui/Toast';
 import { tripsApi } from '../services/api/trips';
 import { chatApi } from '../services/api/chat';
 import { reviewsApi, usersApi } from '../services/api';
@@ -152,6 +153,17 @@ export default function TripPage() {
     mutationFn: () => tripsApi.publish(id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trip', id] });
+    },
+  });
+
+  const completeTripMutation = useMutation({
+    mutationFn: () => tripsApi.complete(id!),
+    onSuccess: () => {
+      showToast(t('trips.completedSuccess'), 'success');
+      queryClient.invalidateQueries({ queryKey: ['trip', id] });
+    },
+    onError: (e: any) => {
+      showToast(e?.response?.data?.detail || t('errors.completeTrip'), 'error');
     },
   });
 
@@ -440,13 +452,15 @@ export default function TripPage() {
         {/* Кнопки управления для владельца */}
         {isOwner && (
           <div className={styles.ownerActions}>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => navigate(`/trips/${trip.id}/edit`)}
-            >
-              {t('trips.edit')}
-            </Button>
+            {trip.status !== 'completed' && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => navigate(`/trips/${trip.id}/edit`)}
+              >
+                {t('trips.edit')}
+              </Button>
+            )}
             {trip.status === 'draft' && (
               <Button 
                 variant="primary" 
@@ -455,6 +469,16 @@ export default function TripPage() {
                 onClick={() => publishTripMutation.mutate()}
               >
                 {t('trips.publish')}
+              </Button>
+            )}
+            {(trip.status === 'published' || trip.status === 'active') && (
+              <Button 
+                variant="success" 
+                size="sm"
+                loading={completeTripMutation.isPending}
+                onClick={() => completeTripMutation.mutate()}
+              >
+                {t('trips.complete')}
               </Button>
             )}
             {trip.status !== 'cancelled' && trip.status !== 'completed' && (

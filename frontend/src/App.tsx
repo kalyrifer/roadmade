@@ -4,6 +4,7 @@ import Layout from './components/Layout';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useAuthStore } from './stores/auth';
 import { Skeleton } from './components/ui';
+import { ToastContainer } from './components/ui/Toast';
 
 // Lazy loaded pages
 const HomePage = lazy(() => import('./pages/HomePage'));
@@ -135,6 +136,7 @@ function App() {
         </Routes>
         </Suspense>
       </ErrorBoundary>
+      <ToastContainer />
     </Layout>
   );
 }

@@ -392,6 +392,62 @@ async def publish_trip(
     )
 
 
+# Alternative endpoint with different path
+@router.patch("/{trip_id}/finish", response_model=TripResponse)
+async def finish_trip(
+    trip_id: str,
+    current_user: CurrentUserDep,
+    trip_service: TripServiceDep,
+) -> TripResponse:
+    """Завершение поездки (alternative path)."""
+    try:
+        trip_uuid = uuid.UUID(trip_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid trip ID format"
+        )
+    
+    return await trip_service.complete_trip(
+        current_user=current_user,
+        trip_id=trip_uuid
+    )
+
+
+@router.patch("/{trip_id}/complete", response_model=TripResponse)
+async def complete_trip(
+    trip_id: str,
+    current_user: CurrentUserDep,
+    trip_service: TripServiceDep,
+) -> TripResponse:
+    """
+    Завершение поездки.
+    
+    Помечает поездку как завершённую и отправляет уведомления пассажирам.
+    
+    Args:
+        trip_id: ID поездки (UUID строка)
+        current_user: Текущий авторизованный пользователь
+        trip_service: Сервис для работы с поездками
+        
+    Returns:
+        TripResponse: Завершённая поездка
+    """
+    # Валидация UUID
+    try:
+        trip_uuid = uuid.UUID(trip_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid trip ID format"
+        )
+    
+    return await trip_service.complete_trip(
+        current_user=current_user,
+        trip_id=trip_uuid
+    )
+
+
 @router.get("/{trip_id}/passengers")
 async def get_trip_passengers(
     trip_id: str,

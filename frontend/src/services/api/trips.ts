@@ -88,6 +88,11 @@ export const tripsApi = {
     return response.data;
   },
 
+  complete: async (id: string): Promise<Trip> => {
+    const response = await api.patch<Trip>(`/trips/${id}/finish`);
+    return response.data;
+  },
+
   getMyTrips: async (status?: string): Promise<Trip[]> => {
     try {
       const response = await api.get<{ items: Trip[] }>('/trips/my/driver', {

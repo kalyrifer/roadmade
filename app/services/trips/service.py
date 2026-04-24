@@ -559,6 +559,82 @@ class TripService:
         
         return TripResponse.from_orm(cancelled_trip)
     
+    async def complete_trip(
+        self,
+        current_user: User,
+        trip_id: uuid.UUID
+    ) -> TripResponse:
+        """
+        Завершение поездки.
+        
+        Args:
+            current_user: Текущий пользователь
+            trip_id: ID поездки
+            
+        Returns:
+            TripResponse: Завершенная поездка
+            
+        Raises:
+            HTTPException: 403 если нет прав
+            HTTPException: 404 если поездка не найдена
+            HTTPException: 400 если поездка уже завершена
+        """
+        trip = await self.trip_repo.get_by_id_with_requests(trip_id)
+        
+        if not trip:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Trip not found"
+            )
+        
+        # Проверка прав: только владелец может завершить
+        if trip.driver_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to complete this trip"
+            )
+        
+        # Проверка статуса
+        if trip.status == TripStatus.COMPLETED:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Trip is already completed"
+            )
+        
+        if trip.status == TripStatus.CANCELLED:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot complete cancelled trip"
+            )
+        
+        # Обновляем статус на completed
+        completed_trip = await self.trip_repo.update(
+            trip,
+            {"status": TripStatus.COMPLETED.value}
+        )
+        
+        # Отправляем уведомления пассажирам
+        from app.services.notifications.service import NotificationService
+        
+        # Create notification service instance
+        notification_service = NotificationService(self.trip_repo.session)
+        
+        if trip.trip_requests:
+            for request in trip.trip_requests:
+                if request.status.name == "CONFIRMED" and request.passenger_id:
+                    try:
+                        await notification_service.notify_trip_completed(
+                            user_id=request.passenger_id,
+                            trip_id=trip.id,
+                            from_city=trip.from_city,
+                            to_city=trip.to_city,
+                        )
+                    except Exception as e:
+                        # Log error but continue
+                        print(f"Failed to send notification to passenger {request.passenger_id}: {e}")
+        
+        return TripResponse.from_orm(completed_trip)
+    
     async def delete_trip(
         self,
         current_user: User,

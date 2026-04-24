@@ -89,8 +89,7 @@ export default function TripsPage() {
   };
 
   const filteredTrips = trips.filter((trip: Trip) => {
-    if (!currentUser) return trip.driver_id !== currentUser?.id;
-    if (trip.driver_id === currentUser.id) return false;
+    if (currentUser && trip.driver_id === currentUser.id) return false;
     if (userTripIds.has(trip.id)) return false;
     return true;
   });
