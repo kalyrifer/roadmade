@@ -1,28 +1,18 @@
 """
 Безопасность: JWT токены и пароли.
 """
-import hashlib
-import types
 from datetime import datetime, timedelta
 from typing import Any
 
 from jose import JWTError, jwt
 import bcrypt
-from passlib.context import CryptContext
 from pydantic import BaseModel
 
 from app.core.config import settings
 
-if not hasattr(bcrypt, "__about__"):
-    bcrypt.__about__ = types.SimpleNamespace(__version__=getattr(bcrypt, "__version__", "unknown"))
-
-# Контекст для хеширования паролей
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 
 class TokenData(BaseModel):
     """Данные токена."""
-    # В токене `sub` хранится как UUID строкой (см. AuthService).
     user_id: str | None = None
     exp: datetime | None = None
 
@@ -37,7 +27,7 @@ def hash_password(password: str) -> str:
     """
     Возвращает безопасный хэш пароля.
     
-    Использует bcrypt через Passlib для безопасного хэширования.
+    Использует bcrypt для безопасного хэширования.
     Каждый вызов генерирует уникальную соль (salt).
     
     Args:
@@ -46,21 +36,15 @@ def hash_password(password: str) -> str:
     Returns:
         str: Хэш пароля для хранения в БД
     """
-    normalized_password = password.encode("utf-8")
-    if len(normalized_password) > 72:
-        normalized_password = hashlib.sha256(normalized_password).hexdigest().encode("utf-8")
-    return pwd_context.hash(normalized_password.decode("utf-8"))
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
-# Alias for backward compatibility
 get_password_hash = hash_password
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
     Сравнивает пароль с хэшем.
-    
-    Защищен от timing attacks через Passlib.
     
     Args:
         plain_password: Пароль в открытом виде
@@ -69,10 +53,10 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Returns:
         bool: True если пароли совпадают, False иначе
     """
-    normalized_password = plain_password.encode("utf-8")
-    if len(normalized_password) > 72:
-        normalized_password = hashlib.sha256(normalized_password).hexdigest().encode("utf-8")
-    return pwd_context.verify(normalized_password.decode("utf-8"), hashed_password)
+    try:
+        return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
+    except Exception:
+        return False
 
 
 def create_access_token(data: dict[str, Any], expires_delta: timedelta | None = None) -> str:
