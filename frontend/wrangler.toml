@@ -1,0 +1,16 @@
+name = "roadmate-frontend"
+type = "pages"
+
+# Cloudflare Pages configuration
+[pages]
+  build_command = "npm run build"
+  build_output_dir = "dist"
+  dist_dir = "dist"
+
+# Environment variables for production
+[vars]
+  VITE_API_URL = "https://api.roadmate.digital/api/v1"
+  VITE_WS_URL = "wss://api.roadmate.digital/ws"
+
+# Compatibility settings
+compatibility_date = "2024-04-03"
