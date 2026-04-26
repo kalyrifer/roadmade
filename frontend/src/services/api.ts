@@ -261,7 +261,7 @@ export const reviewsApi = {
   },
   
   create: async (data: { trip_id: string; target_id: string; rating: number; text?: string }) => {
-    const response = await axiosInstance.post<any>('/reviews', data);
+    const response = await axiosInstance.post<any>('/reviews/', data);
     return response.data;
   },
   

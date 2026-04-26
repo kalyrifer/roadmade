@@ -31,7 +31,7 @@ export interface ReviewListResponse {
 
 export const reviewsApi = {
   create: async (data: ReviewCreate): Promise<Review> => {
-    const response = await api.post<Review>('/reviews', data);
+    const response = await api.post<Review>('/reviews/', data);
     return response.data;
   },
 
