@@ -5,12 +5,13 @@ Service слой для работы с отзывами (Review).
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import select, func, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.reviews.model import Review, ReviewStatus
 from app.models.trips.model import Trip, TripStatus
 from app.models.requests.model import TripRequest, TripRequestStatus
+from app.models.users.model import User
 from app.repositories.reviews.repository import ReviewRepository
 from app.schemas.reviews import ReviewCreate, ReviewList
 
@@ -136,7 +137,32 @@ class ReviewService:
             text=data.text,
         )
 
+        # Пересчитываем агрегированный рейтинг получателя отзыва
+        await self._recalculate_user_rating(data.target_id)
+
         return review
+
+    async def _recalculate_user_rating(self, user_id: UUID) -> None:
+        """Пересчёт рейтинга пользователя по опубликованным отзывам."""
+        result = await self.session.execute(
+            select(
+                func.coalesce(func.avg(Review.rating), 0.0),
+                func.count(Review.id),
+            )
+            .where(
+                Review.target_id == user_id,
+                Review.status == ReviewStatus.PUBLISHED,
+            )
+        )
+        avg_rating, count = result.one()
+        await self.session.execute(
+            update(User)
+            .where(User.id == user_id)
+            .values(
+                rating_average=round(float(avg_rating), 2),
+                rating_count=int(count),
+            )
+        )
 
     async def get_review(self, review_id: UUID) -> Review:
         """Получение отзыва по ID."""
